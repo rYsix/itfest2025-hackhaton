@@ -169,6 +169,24 @@
     line-height: 1.5;
     min-height: 50px;
 }
+.req-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 10px;
+    color: var(--text-gray);
+}
+
+.req-info-block {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    line-height: 1.45;
+}
+
 
 .req-footer {
     margin-top: auto;
@@ -273,50 +291,109 @@
     </div>
 
     <!-- === ACTIVE REQUESTS === -->
-    <div class="section-label">{% tr "Активные заявки" %}</div>
+<div class="section-label">{% tr "Активные заявки" %}</div>
 
-    <div class="req-grid">
-    {% for t in tickets %}
-        {% if t.status != "done" %}
-        <div class="req-card">
-            <div class="req-header">
-                <div class="req-title">{{ t.client.full_name }}</div>
-                <div class="req-status {{ t.status }}">{{ t.get_status_display }}</div>
+<div class="req-grid">
+{% for t in tickets %}
+    {% if t.status != "done" %}
+    <div class="req-card">
+
+        <!-- HEADER -->
+        <div class="req-header">
+            <div class="req-title">
+                {{ t.client.full_name }} 
+                <span style="font-size:12px;color:#6b7280;">#{{ t.ticket_code }}</span>
             </div>
+            <div class="req-status {{ t.status }}">{{ t.get_status_display }}</div>
+        </div>
 
-            <div class="req-desc">{{ t.description|truncatechars:120 }}</div>
+        <!-- DESCRIPTION -->
+        <div class="req-desc">
+            <strong>{% tr "Описание" %}:</strong><br>
+            {{ t.description|truncatechars:180 }}
+        </div>
 
-            <div class="req-footer">
-                <div>
-                    {% tr "Инженер" %}: {{ t.engineer.full_name|default:"—" }}
-                </div>
-            </div>
+        <!-- PRIORITY + PROBABILITY -->
+        <div class="req-info">
+            <div><strong>{% tr "Приоритет" %}:</strong> {{ t.priority_score }}/100</div>
+            <div><strong>{% tr "Вероятность визита" %}:</strong> {{ t.engineer_visit_probability }}%</div>
+        </div>
+
+        {% if t.why_engineer_needed %}
+        <div class="req-info-block">
+            <strong>{% tr "Почему требуется инженер" %}:</strong><br>
+            {{ t.why_engineer_needed|truncatechars:200 }}
         </div>
         {% endif %}
-    {% endfor %}
-    </div>
 
-    <!-- === FINISHED === -->
-    <div class="section-label" style="margin-top:35px;">{% tr "Завершённые" %}</div>
-
-    <div class="req-grid">
-    {% for t in tickets %}
-        {% if t.status == "done" %}
-        <div class="req-card finished">
-            <div class="req-header">
-                <div class="req-title">{{ t.client.full_name }}</div>
-                <div class="req-status done">{% tr "Закрыта" %}</div>
-            </div>
-
-            <div class="req-desc">{{ t.description|truncatechars:160 }}</div>
-
-            <div class="req-footer">
-                <span>{{ t.closed_at|date:"d.m.Y H:i" }}</span>
-            </div>
+        {% if t.proposed_solution_engineer %}
+        <div class="req-info-block">
+            <strong>{% tr "Техническая рекомендация" %}:</strong><br>
+            {{ t.proposed_solution_engineer|truncatechars:200 }}
         </div>
         {% endif %}
-    {% endfor %}
+
+        {% if t.proposed_solution_client %}
+        <div class="req-info-block">
+            <strong>{% tr "Рекомендация клиенту" %}:</strong><br>
+            {{ t.proposed_solution_client|truncatechars:200 }}
+        </div>
+        {% endif %}
+
+        <!-- FOOTER -->
+        <div class="req-footer">
+            <div>
+                {% tr "Инженер" %}: {{ t.engineer.full_name|default:"—" }}
+            </div>
+            <div style="font-size:11px;color:#9ca3af;">
+                {{ t.created_at|date:"d.m.Y H:i" }}
+            </div>
+        </div>
+
     </div>
+    {% endif %}
+{% endfor %}
+</div>
+
+
+<!-- === FINISHED === -->
+<div class="section-label" style="margin-top:35px;">{% tr "Завершённые" %}</div>
+
+<div class="req-grid">
+{% for t in tickets %}
+    {% if t.status == "done" %}
+    <div class="req-card finished">
+
+        <div class="req-header">
+            <div class="req-title">
+                {{ t.client.full_name }}
+                <span style="font-size:12px;color:#6b7280;">#{{ t.ticket_code }}</span>
+            </div>
+            <div class="req-status done">{% tr "Закрыта" %}</div>
+        </div>
+
+        <div class="req-desc">
+            <strong>{% tr "Описание" %}:</strong><br>
+            {{ t.description|truncatechars:200 }}
+        </div>
+
+        {% if t.final_resolution %}
+        <div class="req-info-block">
+            <strong>{% tr "Финальное решение" %}:</strong><br>
+            {{ t.final_resolution|truncatechars:200 }}
+        </div>
+        {% endif %}
+
+        <div class="req-footer">
+            <span style="font-size:12px;">
+                {% tr "Закрыта" %}: {{ t.closed_at|date:"d.m.Y H:i" }}
+            </span>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+</div>
+
 
 </div>
 
