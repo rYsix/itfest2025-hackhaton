@@ -1,0 +1,76 @@
+{% load static %}
+{% load lang_tags %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <!-- ===== TITLE ===== -->
+    <title>
+        {% block title %}
+            {% tr "AqylNet — Административная панель" %}
+        {% endblock %}
+    </title>
+
+    <!-- ===== META DESCRIPTION ===== -->
+    <meta name="description" content="{% tr 'Административная панель AqylNet. Управление системой, пользователями, карточками, переводами и настройками.' %}">
+
+    <!-- ===== META KEYWORDS ===== -->
+    <meta name="keywords" content="{% tr 'AqylNet, админ панель, администрирование, управление системой, поддержка клиентов' %}">
+
+    <!-- ===== OG TAGS ===== -->
+    <meta property="og:title" content="{% tr 'AqylNet — Административная панель' %}">
+    <meta property="og:description" content="{% tr 'Закрытый административный интерфейс AqylNet для управления сервисом и данными.' %}">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{% static 'favicons/fav.png' %}">
+    <meta property="og:locale" content="ru_RU">
+
+    <!-- Favicons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicons/fav.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicons/fav.png' %}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{% static 'favicons/fav.png' %}">
+    <link rel="shortcut icon" href="{% static 'favicons/fav.png' %}">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{% static 'dist/font-awesome_4_7/css/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/layout-admin.css' %}">
+</head>
+
+<body>
+
+<div class="layout">
+
+    {% include 'cadmin/base/sidebar.html' %}
+
+    <div class="layout-main">
+
+        {% include 'cadmin/base/header.html' %}
+
+        <main class="main">
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="msg-banner {{ message.tags }}">
+                        <span>{% tr message %}</span>
+                        <span class="msg-close" onclick="this.parentElement.remove()">×</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        {% include 'cadmin/base/footer.html' %}
+    </div>
+</div>
+
+<div class="unsupported">
+    {% tr "Интерфейс не поддерживает экран вашего размера." %}
+</div>
+
+<script src="{% static 'js/timezone.js' %}"></script>
+
+</body>
+</html>

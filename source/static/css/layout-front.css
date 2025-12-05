@@ -1,0 +1,172 @@
+/* ===============================
+   LAYOUT — FOOTER ALWAYS AT BOTTOM
+   =============================== */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    font-family: "Inter", system-ui, sans-serif;
+    background: #F5F7FA;
+    color: #37474F;
+}
+
+#main-content {
+    flex: 1;
+}
+
+/* ===============================
+   GLOBAL
+   =============================== */
+.page-content {
+    width: 92%;
+    max-width: 1280px;
+    margin: 30px auto;
+}
+
+/* ===============================
+   PREHEAD
+   =============================== */
+.prehead {
+    background: #0288D1;
+    color: #ffffff;
+    padding: 6px 0;
+    font-size: 14px;
+}
+
+.prehead-container {
+    width: 92%;
+    max-width: 1280px;
+    margin: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.prehead-text {
+    opacity: 0.95;
+}
+
+.prehead-lang a {
+    color: #ffffff;
+    text-decoration: none;
+    margin-left: 12px;
+    font-weight: 500;
+    opacity: 0.75;
+    transition: 0.2s;
+}
+
+.prehead-lang a:hover {
+    opacity: 1;
+}
+
+.prehead-lang a.active {
+    text-decoration: underline;
+    font-weight: 600;
+    opacity: 1;
+}
+
+/* ===============================
+   NAVBAR
+   =============================== */
+.navbar {
+    background: #ffffff;
+    border-bottom: 1px solid #E0E6EA;
+    padding: 12px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navbar-container {
+    width: 92%;
+    max-width: 1280px;
+    margin: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: #263238;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.navbar-brand img {
+    width: 32px;
+    height: 32px;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+}
+
+/* ===============================
+   FOOTER
+   =============================== */
+.footer {
+    background: #ffffff;
+    border-top: 1px solid #E0E6EA;
+    padding: 20px 0;
+    margin-top: 40px;
+}
+
+.footer-container {
+    width: 92%;
+    max-width: 1280px;
+    margin: auto;
+    text-align: center;
+    color: #78909C;
+    font-size: 14px;
+}
+
+.admin-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #9BA7B0;
+    opacity: 0.6;
+    text-decoration: none;
+    transition: 0.25s ease;
+}
+
+.admin-link:hover {
+    opacity: 1;
+    color: #546E7A;
+    text-decoration: underline;
+}
+
+/* ===============================
+   RESPONSIVE
+   =============================== */
+@media (max-width: 900px) {
+    .prehead-text {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 600px) {
+    .prehead-container,
+    .navbar-container {
+        width: 94%;
+    }
+
+    .page-content {
+        width: 94%;
+        margin-top: 20px;
+    }
+
+    .navbar-brand span {
+        font-size: 17px;
+    }
+}

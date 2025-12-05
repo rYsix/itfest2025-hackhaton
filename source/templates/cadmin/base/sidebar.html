@@ -1,0 +1,50 @@
+{% load static %}
+{% load lang_tags %}
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <img src="{% static 'favicons/fav.png' %}" alt="AqylNet">
+    </div>
+
+    <nav class="sidebar-nav">
+        <ul>
+
+            <li class="{% if slug_nav == 'dashboard' %}nav-active{% endif %}">
+                <a href="/cadmin/dashboard/" title="{% tr 'Панель управления' %}">
+                    <i class="fa fa-dashboard"></i>
+                </a>
+            </li>
+
+            <li class="{% if slug_nav == 'users' %}nav-active{% endif %}">
+                <a href="/cadmin/users/" title="{% tr 'Пользователи' %}">
+                    <i class="fa fa-users"></i>
+                </a>
+            </li>
+
+            <li class="{% if slug_nav == 'cards' %}nav-active{% endif %}">
+                <a href="/cadmin/cards/" title="{% tr 'Карточки' %}">
+                    <i class="fa fa-id-card"></i>
+                </a>
+            </li>
+
+            <li class="{% if slug_nav == 'translations' %}nav-active{% endif %}">
+                <a href="/cadmin/translations/" title="{% tr 'Переводы' %}">
+                    <i class="fa fa-language"></i>
+                </a>
+            </li>
+
+            <li class="{% if slug_nav == 'logs' %}nav-active{% endif %}">
+                <a href="/cadmin/logs/" title="{% tr 'Логи' %}">
+                    <i class="fa fa-list-alt"></i>
+                </a>
+            </li>
+
+            <li class="{% if slug_nav == 'settings' %}nav-active{% endif %}">
+                <a href="/cadmin/settings/" title="{% tr 'Настройки' %}">
+                    <i class="fa fa-cog"></i>
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+</aside>

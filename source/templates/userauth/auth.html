@@ -1,0 +1,58 @@
+{% load static %}
+{% load lang_tags %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% tr 'Вход — Hackaton ITFest' %}</title>
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+</head>
+<body>
+
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <h1>{% tr 'Hackaton ITFest' %}</h1>
+        </div>
+
+        <form method="post" class="auth-form" novalidate>
+            {% csrf_token %}
+
+            <label for="email">{% tr 'E-mail' %}</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="{% tr 'Введите e-mail' %}"
+                required
+            >
+
+            <label for="password">{% tr 'Пароль' %}</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="{% tr 'Введите пароль' %}"
+                required
+            >
+
+            <button type="submit" class="auth-btn">
+                {% tr 'Войти' %}
+            </button>
+        </form>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="auth-message {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+    </div>
+</div>
+
+</body>
+</html>

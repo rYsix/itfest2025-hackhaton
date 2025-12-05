@@ -1,0 +1,56 @@
+:root {
+  /* === Core Brand Colors === */
+  --orbit-primary: #455A64;       /* Steel Gray (главный цвет Orbit) */
+  --orbit-primary-light: #607D8B; /* Light Steel Gray */
+  --orbit-primary-dark: #263238;  /* Deep Graphite Gray */
+
+  /* === Accent Colors === */
+  --orbit-accent-blue: #4FC3F7;   /* Calm cyan blue */
+  --orbit-accent-purple: #7E57C2; /* Modern tech violet */
+  --orbit-accent-green: #81C784;  /* Soft success green */
+  --orbit-accent-orange: #FFB74D; /* Warm highlight orange */
+  --orbit-accent-red: #E57373;    /* Alert red */
+
+  /* === Neutral Palette === */
+  --orbit-white: #FFFFFF;         /* Pure white */
+  --orbit-offwhite: #ECEFF1;      /* Subtle neutral background */
+  --orbit-gray-light: #CFD8DC;    /* Border gray */
+  --orbit-gray-medium: #90A4AE;   /* Secondary text */
+  --orbit-gray-dark: #37474F;     /* Primary text */
+
+  /* === UI Elements === */
+  --orbit-bg-default: #ECEFF1;    /* Background of pages */
+  --orbit-bg-card: #FFFFFF;       /* Card background */
+  --orbit-border: #CFD8DC;        /* Divider and card border */
+  --orbit-text-primary: #37474F;  /* Main text */
+  --orbit-text-secondary: #90A4AE;/* Secondary text */
+  --orbit-link-hover: #4FC3F7;    /* Hover color */
+  --orbit-focus-ring: rgba(79, 195, 247, 0.4);
+
+  /* === Status Colors === */
+  --orbit-success: #81C784;
+  --orbit-warning: #FFB74D;
+  --orbit-error: #E57373;
+  --orbit-info: #4FC3F7;
+
+  /* === Gradients === */
+  --orbit-gradient-primary: linear-gradient(135deg, #455A64, #607D8B);
+  --orbit-gradient-accent: linear-gradient(135deg, #4FC3F7, #7E57C2);
+  --orbit-gradient-warm: linear-gradient(135deg, #FFB74D, #E57373);
+
+  /* === Shadows === */
+  --orbit-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --orbit-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --orbit-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.18);
+
+  /* === Border Radius === */
+  --orbit-radius-sm: 4px;
+  --orbit-radius-md: 8px;
+  --orbit-radius-lg: 12px;
+  --orbit-radius-xl: 20px;
+
+  /* === Transitions === */
+  --orbit-transition-fast: 0.15s ease-in-out;
+  --orbit-transition-medium: 0.25s ease-in-out;
+  --orbit-transition-slow: 0.4s ease-in-out;
+}

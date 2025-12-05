@@ -1,0 +1,15 @@
+{% extends "front/base.html" %}
+{% load lang_tags %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-3">
+        {% tr "test_page_title" %}
+    </h1>
+    {{ total_price }}
+    {{ client.full_name}}
+    <p>
+        {% tr "Тестовая страница" %}
+    </p>
+</div>
+{% endblock %}

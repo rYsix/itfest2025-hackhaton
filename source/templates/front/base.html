@@ -1,0 +1,44 @@
+{% load static %}
+{% load lang_tags %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>{% block title %}{% tr "AqylNet — Сайт поддержки клиентов Казахтелеком" %}{% endblock %}</title>
+
+    <meta name="description" content="{% tr 'AqylNet — платформа поддержки клиентов Казахтелеком. Решение проблем, помощь, заявки и справочная информация.' %}">
+    <meta name="keywords" content="{% tr 'AqylNet, Казахтелеком, поддержка клиентов, техподдержка, помощь, заявки, FAQ' %}">
+
+    <meta property="og:title" content="{% tr 'AqylNet — поддержка клиентов Казахтелеком' %}">
+    <meta property="og:description" content="{% tr 'Удобная система поддержки клиентов. Помощь, управление заявками, база знаний.' %}">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{% static 'favicons/favicon-512x512.png' %}">
+    <meta property="og:locale" content="ru_RU">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicons/fav.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicons/fav.png' %}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{% static 'favicons/fav.png' %}">
+    <link rel="shortcut icon" href="{% static 'favicons/fav.png' %}">
+
+    <link rel="stylesheet" href="{% static 'dist/font-awesome_4_7/css/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/layout-front.css' %}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+    {% include "front/base/header.html" %}
+
+    <main class="page-content" id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include "front/base/footer.html" %}
+
+</body>
+</html>
