@@ -85,7 +85,6 @@ class EngineerAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
     readonly_fields = ("active_tickets_count",)
 
-
 # ============================================================
 # Админка Заявок
 # ============================================================
@@ -138,6 +137,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
                     "description",
                     "priority_score",
                     "engineer_visit_probability",
+                    "why_engineer_needed",
                     "proposed_solution_engineer",
                     "proposed_solution_client",
                     "final_resolution",

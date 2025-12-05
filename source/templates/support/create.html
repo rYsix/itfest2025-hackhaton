@@ -201,12 +201,43 @@
     {% if success %}
     <div class="success-message">
         <div class="success-title">{% tr "Заявка успешно создана!" %}</div>
+
         <div class="success-text">
             {% tr "Ваша заявка принята в обработку. Мы свяжемся с вами в ближайшее время." %}
         </div>
+
         {% if ticket.ticket_code %}
         <div class="ticket-id">{% tr "Номер заявки " %} {{ ticket.ticket_code }}</div>
         {% endif %}
+
+        {% if ticket.proposed_solution_client %}
+        <div style="
+            margin-top: 18px;
+            padding: 16px;
+            border-radius: 8px;
+            background: #E3F2FD;
+            border: 1px solid #BBDEFB;
+            text-align: left;
+        ">
+            <div style="
+                font-size: 15px;
+                font-weight: 600;
+                color: #1565C0;
+                margin-bottom: 6px;
+            ">
+                {% tr "Также попробуйте это — возможно, вы сможете решить проблему самостоятельно:" %}
+            </div>
+
+            <div style="
+                font-size: 14px;
+                color: #0D47A1;
+                line-height: 1.45;
+            ">
+                {{ ticket.proposed_solution_client }}
+            </div>
+        </div>
+        {% endif %}
+
     </div>
     {% endif %}
 

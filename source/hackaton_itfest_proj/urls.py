@@ -44,31 +44,6 @@ def bot_status_view(request):
     )
 
 # ============================================================
-# OPENAI TEST VIEW (STRICT JSON)
-# ============================================================
-
-def openai_test_view(request):
-    """
-    Тестирует OpenAIUseCase.example_usage().
-    Возвращает strict JSON (dict уже адаптирован внутри core-метода).
-    """
-    result = OpenAIUseCase.example_usage("Привет, сделай краткое описание текста.")
-
-    if result is None:
-        return JsonResponse(
-            {"error": "OpenAI returned None"},
-            status=500,
-            json_dumps_params={"ensure_ascii": False}
-        )
-
-    return JsonResponse(
-        result,
-        safe=False,
-        json_dumps_params={"ensure_ascii": False}
-    )
-
-
-# ============================================================
 # URLS
 # ============================================================
 
@@ -85,9 +60,6 @@ urlpatterns = [
     path("support/", include("endpoints.support.urls")),
 
     path("admin/", include("endpoints.admin.urls")),
-
-    # OPENAI TEST
-    path("openai-test/", openai_test_view, name="openai_test"),
 
     # BOT CONTROL
     path("bot-start/", bot_start_view),

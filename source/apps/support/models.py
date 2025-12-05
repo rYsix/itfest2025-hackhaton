@@ -217,6 +217,12 @@ class SupportTicket(models.Model):
         help_text="Целое число процентов."
     )
 
+    why_engineer_needed = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name="Почему требуется инженер"
+    )
+
     # ============================================================
     # Новые AI-поля
     # ============================================================
@@ -232,6 +238,7 @@ class SupportTicket(models.Model):
         blank=True,
         verbose_name="Рекомендация клиенту"
     )
+    
 
     # ============================================================
 

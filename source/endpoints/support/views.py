@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from apps.support.models import SupportTicket, Client
 
+from cross.openai_use_case import OpenAIUseCase
 
 # ============================================================
 # СОЗДАНИЕ ЗАЯВКИ
@@ -11,7 +12,10 @@ from apps.support.models import SupportTicket, Client
 def support_view(request):
     """
     Создание заявки техподдержки.
+    GET → показывает форму (с автоподстановкой случайного клиента).
+    POST → принимает данные, валидирует, вызывает твои модули, создаёт тикет.
     """
+
     context = {
         "full_name": "",
         "account_number": "",
@@ -29,6 +33,7 @@ def support_view(request):
         if random_client:
             context["full_name"] = random_client.full_name
             context["account_number"] = random_client.account_number
+
         return render(request, "support/create.html", context)
 
     # --------------------------------------------------------
@@ -44,12 +49,12 @@ def support_view(request):
         "description": description,
     })
 
-    # ----- Валидация -----
+    # ------------- ВАЛИДАЦИЯ -------------
     if not full_name or not account_number or not description:
         context["error"] = "Пожалуйста, заполните все обязательные поля."
         return render(request, "support/create.html", context)
 
-    # -------- Поиск клиента --------
+    # ----------- Поиск клиента -----------
     client = Client.objects.filter(account_number=account_number).first()
 
     if client is None:
@@ -59,12 +64,44 @@ def support_view(request):
         )
         return render(request, "support/create.html", context)
 
+    recommendations = OpenAIUseCase.generate_global_recommendations(description)
+    
+    client_recommmendation = recommendations.get("client_advice", "No recommendation")
+    engineer_recommendation = recommendations.get("engineer_advice", "No recommendation")
+
+    about_engineer_visit = OpenAIUseCase.generate_engineer_probability(description, age=client.age)
+
+    
+    engineer_visit_probability = about_engineer_visit.get("probability", 0)
+    engineer_visit_explanation = about_engineer_visit.get("explanation", "")
+
+    print(about_engineer_visit)
+
+    # ========================================================
+    # HOOK: место для подключения твоих модулей
+    # ========================================================
+    #
+    # Здесь можно вызвать любые сервисы:
+    #
+    # ai_result = OpenAIUseCase.process(description)
+    # risk = RiskCalculator.calculate(client, description)
+    # engineer = RouterService.assign_engineer(client, risk)
+    # BillingService.notify(client)
+    # LoggerService.log_ticket_creation(...)
+    #
+    # Просто вставляй код сюда — это безопасная точка перед созданием тикета.
+    #
+    # ========================================================
+
     # -------- Создание тикета --------
     ticket = SupportTicket.objects.create(
         client=client,
         description=description,
         priority_score=50,
-        engineer_visit_probability=0,
+        engineer_visit_probability=engineer_visit_probability,
+        why_engineer_needed=engineer_visit_explanation,
+        proposed_solution_engineer=engineer_recommendation,
+        proposed_solution_client=client_recommmendation,
         status="new",
     )
 
@@ -81,15 +118,16 @@ def support_view(request):
 # ПРОВЕРКА СТАТУСА ЗАЯВКИ
 # ============================================================
 
+@require_http_methods(["GET", "POST"])
 def check_support_view(request):
     """
     Проверка статуса заявки.
-    GET — форма + автоподстановка случайного ticket_code.
-    POST — поиск заявки.
+    GET — форма с автоподстановкой случайного ticket_code.
+    POST — поиск заявки и вывод её данных.
     """
 
     # --------------------------------------------------------
-    # GET → показать форму + ПРЕДЗАПОЛНЕНИЕ ticket_code
+    # GET → показать форму + автоподстановка случайного ticket_id
     # --------------------------------------------------------
     if request.method == "GET":
         context = {}
