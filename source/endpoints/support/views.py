@@ -1,19 +1,21 @@
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
-from apps.support.models import SupportTicket, Client
 
+from apps.support.models import SupportTicket, Client
 from cross.openai_use_case import OpenAIUseCase
+from cross.utils import calculate_final_priority
+
 
 # ============================================================
-# СОЗДАНИЕ ЗАЯВКИ
+#                     СОЗДАНИЕ ЗАЯВКИ
 # ============================================================
 
 @require_http_methods(["GET", "POST"])
 def support_view(request):
     """
     Создание заявки техподдержки.
-    GET → показывает форму (с автоподстановкой случайного клиента).
-    POST → принимает данные, валидирует, вызывает твои модули, создаёт тикет.
+    GET  → показывает форму с подстановкой случайного клиента.
+    POST → принимает входные данные, вызывает AI, создаёт тикет.
     """
 
     context = {
@@ -22,14 +24,15 @@ def support_view(request):
         "description": "",
         "success": False,
         "error": None,
-        "ticket_id": None,
+        "ticket": None,
     }
 
     # --------------------------------------------------------
-    # GET → показать форму + предзаполнение случайным клиентом
+    # GET → отображение формы
     # --------------------------------------------------------
     if request.method == "GET":
         random_client = Client.objects.order_by("?").first()
+
         if random_client:
             context["full_name"] = random_client.full_name
             context["account_number"] = random_client.account_number
@@ -37,7 +40,7 @@ def support_view(request):
         return render(request, "support/create.html", context)
 
     # --------------------------------------------------------
-    # POST
+    # POST → получение данных
     # --------------------------------------------------------
     full_name = request.POST.get("full_name", "").strip()
     account_number = request.POST.get("account_number", "").strip()
@@ -49,12 +52,20 @@ def support_view(request):
         "description": description,
     })
 
-    # ------------- ВАЛИДАЦИЯ -------------
+    # --------------------------------------------------------
+    # ВАЛИДАЦИЯ
+    # --------------------------------------------------------  
     if not full_name or not account_number or not description:
         context["error"] = "Пожалуйста, заполните все обязательные поля."
         return render(request, "support/create.html", context)
+    
+    if not OpenAIUseCase.classify_telecom_issue(description):
+        context["error"] = "Описание проблемы не относится к услугам Казахтелекома."
+        return render(request, "support/create.html", context)
 
-    # ----------- Поиск клиента -----------
+    # --------------------------------------------------------
+    # ПОИСК КЛИЕНТА
+    # --------------------------------------------------------
     client = Client.objects.filter(account_number=account_number).first()
 
     if client is None:
@@ -64,44 +75,48 @@ def support_view(request):
         )
         return render(request, "support/create.html", context)
 
-    recommendations = OpenAIUseCase.generate_global_recommendations(description)
-    
-    client_recommmendation = recommendations.get("client_advice", "No recommendation")
-    engineer_recommendation = recommendations.get("engineer_advice", "No recommendation")
+    # --------------------------------------------------------
+    # HOOK #1 — место для логирования, антифрода, доп. проверки
+    # --------------------------------------------------------
+    # example: RiskAnalyzer.log_request(client, description)
+    # --------------------------------------------------------
 
-    about_engineer_visit = OpenAIUseCase.generate_engineer_probability(description, age=client.age)
+    # --------------------------------------------------------
+    # AI → единый запрос
+    # --------------------------------------------------------
+    ai = OpenAIUseCase.generate_full_ticket_ai(description, client.age)
 
-    
-    engineer_visit_probability = about_engineer_visit.get("probability", 0)
-    engineer_visit_explanation = about_engineer_visit.get("explanation", "")
+    if ai is None:
+        context["error"] = "AI-сервис временно недоступен. Попробуйте позже."
+        return render(request, "support/create.html", context)
 
-    print(about_engineer_visit)
+    # Распаковка результата
+    client_advice              = ai.get("client_advice", "")
+    engineer_advice            = ai.get("engineer_advice", "")
+    engineer_prob              = ai.get("engineer_probability", 0)
+    engineer_prob_expl         = ai.get("engineer_probability_explanation", "")
+    initial_priority           = ai.get("initial_priority", 50)
 
-    # ========================================================
-    # HOOK: место для подключения твоих модулей
-    # ========================================================
-    #
-    # Здесь можно вызвать любые сервисы:
-    #
-    # ai_result = OpenAIUseCase.process(description)
-    # risk = RiskCalculator.calculate(client, description)
-    # engineer = RouterService.assign_engineer(client, risk)
-    # BillingService.notify(client)
-    # LoggerService.log_ticket_creation(...)
-    #
-    # Просто вставляй код сюда — это безопасная точка перед созданием тикета.
-    #
-    # ========================================================
+    final_priority = calculate_final_priority(int(initial_priority), client)
 
-    # -------- Создание тикета --------
+    # --------------------------------------------------------
+    # HOOK #2 — место для автоприсвоения инженера или правил SLA
+    # --------------------------------------------------------
+    # example:
+    # assigned_engineer = EngineerAssignmentService.assign(client, final_priority)
+    # --------------------------------------------------------
+
+    # --------------------------------------------------------
+    # СОЗДАНИЕ ТИКЕТА
+    # --------------------------------------------------------
     ticket = SupportTicket.objects.create(
         client=client,
         description=description,
-        priority_score=50,
-        engineer_visit_probability=engineer_visit_probability,
-        why_engineer_needed=engineer_visit_explanation,
-        proposed_solution_engineer=engineer_recommendation,
-        proposed_solution_client=client_recommmendation,
+        priority_score=final_priority,
+        engineer_visit_probability=engineer_prob,
+        why_engineer_needed=engineer_prob_expl,
+        proposed_solution_engineer=engineer_advice,
+        proposed_solution_client=client_advice,
         status="new",
     )
 
@@ -115,19 +130,19 @@ def support_view(request):
 
 
 # ============================================================
-# ПРОВЕРКА СТАТУСА ЗАЯВКИ
+#                ПРОВЕРКА СТАТУСА ЗАЯВКИ
 # ============================================================
 
 @require_http_methods(["GET", "POST"])
 def check_support_view(request):
     """
     Проверка статуса заявки.
-    GET — форма с автоподстановкой случайного ticket_code.
-    POST — поиск заявки и вывод её данных.
+    GET  → форма + подстановка случайного ticket_code.
+    POST → поиск заявки.
     """
 
     # --------------------------------------------------------
-    # GET → показать форму + автоподстановка случайного ticket_id
+    # GET → форма с авто-заполнением случайной заявки
     # --------------------------------------------------------
     if request.method == "GET":
         context = {}

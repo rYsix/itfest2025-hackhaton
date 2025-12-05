@@ -1,10 +1,15 @@
 """
-CORE OpenAI JSON Helper + Ticket AI Resolver.
+CORE OpenAI JSON Helper + Ticket AI Resolver (Unified).
 
-Добавлено:
-- Автоматический выбор языка через get_language()
-- Инструкция в system_prompt и user_prompt: отвечать строго на нужном языке
-- Новый метод: generate_engineer_probability()
+Особенности:
+- Автоматический выбор языка клиента через get_language()
+- Переводится только client_advice
+- Все тех. тексты (engineer_advice, объяснения) всегда на русском
+- Один AI-запрос → полный JSON
+- Жёсткое ограничение предметной области: ТОЛЬКО услуги Казахтелекома
+- Классификатор «телеком / не телеком»
+- <<< NEW >>> Запрет на любые фразы «позвоните нам», «обратитесь в поддержку»
+- <<< NEW >>> Мы уже техподдержка: не перенаправлять клиента
 """
 
 import logging
@@ -15,24 +20,24 @@ from pydantic import BaseModel
 from apps.support.models import SupportTicket
 from apps.translation._core.active_language_context import get_language
 
-
 logger = logging.getLogger(__name__)
-
 _client = OpenAI(api_key=settings.OPENAI_KEY)
 
 
 # ============================================================
-# STRICT JSON SCHEMAS
+# STRICT JSON SCHEMA
 # ============================================================
 
-class GlobalAdviceSchema(BaseModel):
+class FullAISchema(BaseModel):
     client_advice: str
     engineer_advice: str
+    engineer_probability: int
+    engineer_probability_explanation: str
+    initial_priority: int
 
 
-class EngineerProbabilitySchema(BaseModel):
-    probability: int
-    explanation: str
+class TelecomCheckSchema(BaseModel):
+    is_telecom: bool
 
 
 # ============================================================
@@ -41,163 +46,152 @@ class EngineerProbabilitySchema(BaseModel):
 
 class OpenAIUseCase:
 
-    # ============================================================
-    # STRICT JSON REQUEST
-    # ============================================================
+    # ------------------------------------------------------------
+    # BASE STRICT CALL
+    # ------------------------------------------------------------
     @staticmethod
     def _request(system_prompt: str, user_text: str, schema, model: str = "gpt-4o-mini"):
-
         try:
             result = _client.beta.chat.completions.parse(
                 model=model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_text},
+                    {"role": "user",   "content": user_text},
                 ],
                 temperature=0.1,
                 response_format=schema,
             )
-
-            parsed = result.choices[0].message.parsed
-            data = parsed.dict()
-
-            # ---- Normalize Unicode ----
-            def normalize(v):
-                if isinstance(v, str):
-                    return v.encode("utf-8").decode("utf-8")
-                if isinstance(v, list):
-                    return [normalize(x) for x in v]
-                if isinstance(v, dict):
-                    return {k: normalize(x) for k, x in v.items()}
-                return v
-
-            return normalize(data)
-
+            return result.choices[0].message.parsed.dict()
         except Exception:
             logger.exception("OpenAI strict JSON request failed")
             return None
 
+
     # ============================================================
-    # GENERATE GLOBAL RECOMMENDATIONS
+    # <<< NEW >>> TELECOM CLASSIFIER
     # ============================================================
     @staticmethod
-    def generate_global_recommendations(description: str):
+    def classify_telecom_issue(description: str) -> bool:
         """
-        Строгий JSON:
-        {
-            "client_advice": "...",
-            "engineer_advice": "..."
-        }
+        True → проблема относится к телеком
+        False → не наша зона ответственности
         """
-
-        lang = get_language()  # 'ru', 'kk', 'en'
-        lang_map = {"ru": "русском", "kk": "қазақ", "en": "English"}
-        lang_human = lang_map.get(lang, "English")
-
-        qs = SupportTicket.objects.exclude(final_resolution=None).exclude(final_resolution="")
-
-        history_text = ""
-        for t in qs.order_by("-created_at")[:30]:
-            history_text += f"- {t.final_resolution}\n"
-        if not history_text:
-            history_text = "(финальные решения отсутствуют)"
 
         system_prompt = (
-            "Ты — официальный AI-помощник службы технической поддержки "
-            "АО «Казахтелеком».\n\n"
+            "Ты — строгий классификатор технической поддержки Казахтелекома.\n"
+            "Твоя задача — определить, относится ли проблема к телеком-услугам.\n\n"
 
-            "На основе описания новой проблемы и опыта прошлых финальных решений "
-            "сформируй ДВЕ рекомендации STRICT JSON:\n\n"
+            "Телеком-сфера включает:\n"
+            " - домашний и корпоративный интернет (FTTH, GPON, xDSL)\n"
+            " - Wi-Fi, маршрутизаторы, ONU/ONT\n"
+            " - IPTV и TV-приставки\n"
+            " - IP-телефонию, SIP, VoIP\n"
+            " - мобильную связь 4G/5G\n"
+            " - проводную телефонию\n\n"
 
-            "1) client_advice — краткая, простая рекомендация клиенту.\n"
-            "2) engineer_advice — техническая рекомендация инженеру.\n\n"
+            "НЕ относится:\n"
+            " - автомобили, двигатель, ремонт техники\n"
+            " - компьютеры / ноутбуки как устройство\n"
+            " - медицина, здоровье\n"
+            " - сантехника, электрика, стройка\n"
+            " - бытовая техника, кондиционеры, плиты\n\n"
 
-            f"ВАЖНО: Ответ строго на {lang_human} языке.\n\n"
-
-            "Финальный ответ только JSON:\n"
-            "{\n"
-            "  \"client_advice\": \"...\",\n"
-            "  \"engineer_advice\": \"...\"\n"
-            "}\n"
+            "Ответ строго JSON:\n"
+            "{ \"is_telecom\": true }\n"
+            "или\n"
+            "{ \"is_telecom\": false }\n"
         )
 
-        user_prompt = (
-            f"Описание новой проблемы:\n{description}\n\n"
-            f"Прошлые финальные решения:\n{history_text}\n\n"
-            f"Ответ строго на {lang_human} языке."
-        )
+        user_prompt = f"Описание проблемы:\n{description}\nВерни только JSON."
 
-        return OpenAIUseCase._request(
+        result = OpenAIUseCase._request(
             system_prompt=system_prompt,
             user_text=user_prompt,
-            schema=GlobalAdviceSchema,
+            schema=TelecomCheckSchema,
         )
 
+        return bool(result and result.get("is_telecom", False))
+
+
     # ============================================================
-    # NEW: GENERATE ENGINEER VISIT PROBABILITY
+    # UNIFIED TICKET AI
     # ============================================================
     @staticmethod
-    def generate_engineer_probability(description: str, age: int):
-        """
-        Строгий JSON:
-        {
-            "probability": 70,
-            "explanation": "..."
-        }
+    def generate_full_ticket_ai(description: str, age: int):
 
-        Использует:
-        - описание новой проблемы
-        - возраст клиента
-        - историю всех прошлых:
-            - description
-            - engineer_visit_probability
-        """
+        # Язык для client_advice
+        lang = get_language()
+        lang_human = {"ru": "русском", "kk": "қазақ", "en": "English"}.get(lang, "English")
 
+        # Истории
+        hist_res = "\n".join([
+            f"- {t.final_resolution}"
+            for t in SupportTicket.objects.exclude(final_resolution=None).exclude(final_resolution="")
+            .order_by("-created_at")[:30]
+        ]) or "(нет данных)"
 
+        hist_prob = "\n".join([
+            f"- {t.description}\n  Вероятность: {t.engineer_visit_probability}"
+            for t in SupportTicket.objects.exclude(engineer_visit_probability=None)
+            .order_by("-created_at")[:40]
+        ]) or "(нет данных)"
 
-        # ---- История прошлых вероятностей ----
-        qs = SupportTicket.objects.exclude(engineer_visit_probability=None)
-
-        history = ""
-        for t in qs.order_by("-created_at")[:50]:
-            history += (
-                f"- Описание: {t.description}\n"
-                f"  Вероятность вызова инженера: {t.engineer_visit_probability}\n\n"
-            )
-        if not history:
-            history = "(данные отсутствуют)"
-
-        # ---- System prompt ----
+        # ============================================================
+        # SYSTEM PROMPT — САМЫЙ ЖЁСТКИЙ
+        # ============================================================
         system_prompt = (
-            "Ты — аналитический AI-помощник технической поддержки АО «Казахтелеком».\n\n"
-            "Твоя задача — определить вероятность необходимости вызова инженера на основе:\n"
-            "- описания новой проблемы\n"
-            "- возраста клиента\n"
-            "- истории прошлых проблем и их engineer_visit_probability\n\n"
+            "Ты — единая AI-система технической поддержки АО «Казахтелеком». "
+            "Ты уже являешься службой поддержки. "
+            "Поэтому ЗАПРЕЩЕНО говорить пользователю:\n"
+            " - «позвоните нам»\n"
+            " - «обратитесь в поддержку»\n"
+            " - «создайте заявку»\n"
+            " - «перезвоните оператору»\n"
+            " - «обратитесь к специалисту»\n"
+            " - любые другие просьбы позвонить\n\n"
 
-            "Правила:\n"
-            "- анализируй похожие ситуации\n"
-            "- если клиент пожилой (60+), вероятность должна быть выше, так как требуется помощь на месте\n"
-            "- результат должен быть целым числом от 0 до 100\n"
-            "- дай краткое объяснение\n\n"
+            "Ты НЕ должен перенаправлять клиента. Ты — последний и конечный оператор.\n\n"
 
-            "Ответ только STRICT JSON:\n"
+            "------------------------------------------------------------\n"
+            "   ПРОБЛЕМЫ НЕ ТЕЛЕКОМ — ЗАПРЕЩЕНО ДАВАТЬ ЛЮБЫЕ СОВЕТЫ\n"
+            "------------------------------------------------------------\n"
+            "Если проблема не относится к телеком, ты ДОЛЖЕН вернуть JSON:\n"
             "{\n"
-            "  \"probability\": 0-100,\n"
-            "  \"explanation\": \"...\"\n"
-            "}\n"
+            f'  "client_advice": "Вы описали проблему, которая не относится к услугам Казахтелекома.",\n'
+            '  "engineer_advice": "",\n'
+            '  "engineer_probability": 0,\n'
+            '  "engineer_probability_explanation": "",\n'
+            '  "initial_priority": 30\n'
+            "}\n\n"
+            "БЕЗ любых дополнительных советов.\n"
+            "Никаких бытовых рекомендаций («попробуйте», «почистите», «перезагрузите»).\n\n"
+
+            "------------------------------------------------------------\n"
+            "   ЕСЛИ ПРОБЛЕМА ТЕЛЕКОМ — ГЕНЕРИРУЙ РЕАЛЬНЫЕ ДЕЙСТВИЯ\n"
+            "------------------------------------------------------------\n"
+            "client_advice — короткая безопасная рекомендация, переводить на язык клиента.\n"
+            "engineer_advice — технические шаги для инженера, строго по-русски.\n"
+            "engineer_probability — оценка необходимости выезда.\n"
+            "initial_priority — 30–70.\n\n"
+
+            "Вернуть только JSON. Без markdown. Не объясняй правила."
         )
 
-        # ---- User prompt ----
+        # ============================================================
+        # USER PROMPT
+        # ============================================================
         user_prompt = (
-            f"Описание новой проблемы:\n{description}\n\n"
+            f"Описание проблемы:\n{description}\n\n"
             f"Возраст клиента: {age}\n\n"
-            f"Прошлые заявки:\n{history}\n\n"
+            f"История финальных решений:\n{hist_res}\n\n"
+            f"История engineer_probability:\n{hist_prob}\n\n"
+            f"client_advice на {lang_human} языке.\n"
+            "Остальные поля — строго по-русски.\n"
+            "Верни только JSON."
         )
 
-        # ---- STRICT JSON ----
         return OpenAIUseCase._request(
             system_prompt=system_prompt,
             user_text=user_prompt,
-            schema=EngineerProbabilitySchema,
+            schema=FullAISchema,
         )

@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.db import transaction
 
 # Замените 'apps.support.models' на ваш актуальный путь к моделям
+# ВАЖНО: Убедитесь, что этот импорт соответствует вашему проекту
 from apps.support.models import (
     Client,
     Service,
@@ -14,30 +15,46 @@ from apps.support.models import (
 )
 
 # ============================================================
-# КОНСТАНТЫ И СЦЕНАРИИ
+# КОНСТАНТЫ И СЦЕНАРИИ (с увеличением казахских имен)
 # ============================================================
 
+# Усиление казахских фамилий и русских
 LAST_NAMES = [
-    "Иванов", "Смирнов", "Кузнецов", "Попов", "Васильев", "Петров", "Соколов", 
-    "Михайлов", "Новиков", "Федоров", "Морозов", "Волков", "Алексеев", "Лебедев", 
-    "Семенов", "Егоров", "Павлов", "Козлов", "Степанов", "Николаев", "Алиев", 
-    "Ким", "Пак", "Искаков", "Нургалиев", "Серикбаев", "Омаров"
+    # Казахские (70%)
+    "Алиев", "Искаков", "Нургалиев", "Серикбаев", "Омаров", "Кадыров", 
+    "Жумабаев", "Ахметов", "Тарасов", "Келимбетов", "Мухамеджанов", 
+    "Султанов", "Ермеков", "Абдрахманов", "Сагитов",
+    # Русские (30%)
+    "Иванов", "Смирнов", "Кузнецов", "Попов", "Васильев", "Петров", 
+    "Михайлов", "Новиков", "Федоров"
 ]
 
+# Усиление казахских имен и русских
 FIRST_NAMES = [
-    "Александр", "Сергей", "Владимир", "Елена", "Андрей", "Алексей", "Михаил", 
-    "Дмитрий", "Екатерина", "Наталья", "Мария", "Анна", "Игорь", "Юрий", 
-    "Николай", "Светлана", "Ержан", "Тимур", "Кайрат", "Азамат", "Даулет", 
-    "Айгуль", "Динара", "Алия"
+    # Казахские (70%)
+    "Ержан", "Тимур", "Кайрат", "Азамат", "Даулет", "Айгуль", "Динара", 
+    "Алия", "Бауыржан", "Нурлан", "Мадина", "Зарина", "Аслан", "Айдос", 
+    "Самат",
+    # Русские (30%)
+    "Александр", "Сергей", "Елена", "Андрей", "Алексей", "Екатерина", 
+    "Наталья", "Мария", "Анна"
 ]
 
 STREETS = [
-    "Абая", "Ленина", "Мира", "Сатпаева", "Толе би", "Достык", "Гоголя", 
-    "Сейфуллина", "Назарбаева", "Желтоксан", "Байтурсынова", "Гагарина"
+    # Казахские (70%)
+    "Абая", "Сатпаева", "Толе би", "Достык", "Сейфуллина", "Назарбаева", 
+    "Желтоксан", "Байтурсынова", "Аль-Фараби", "Рыскулова",
+    # Русские (30%)
+    "Ленина", "Мира", "Гагарина", "Гоголя"
 ]
 
-# Словарь сценариев: Тип услуги -> Список проблем
-# Каждая проблема содержит описание, решение для инженера, совет клиенту и вес (вероятность поломки)
+# Казахские слова для названий компаний
+COMPANY_PREFIXES = ["ТОО", "АО", "ИП", "ПК"]
+KAZAKH_COMPANY_WORDS = [
+    "Жер", "Алатау", "Коркем", "Даму", "Алтын", "Куат", "Береке", "Сапа"
+]
+
+# Словарь сценариев остается без изменений, он корректен
 SCENARIOS = {
     "networks": [
         {
@@ -124,11 +141,12 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             self._delete_all()
+            # Увеличение числа активных инженеров для лучшего распределения заявок
             services = self._seed_services()
             engineers = self._seed_engineers()
-            clients = self._seed_clients(count=40) # Генерируем 40 клиентов
+            clients = self._seed_clients(count=50) # Увеличим число клиентов до 50
             self._seed_client_services(clients, services)
-            self._seed_tickets(clients, engineers, count=150) # 150 заявок
+            self._seed_tickets(clients, engineers, count=200) # Увеличим число заявок до 200
 
         self.stdout.write(self.style.SUCCESS("\n=== ГОТОВО! БД ЗАПОЛНЕНА ===\n"))
 
@@ -145,11 +163,11 @@ class Command(BaseCommand):
         data = [
             ("Тариф 'Домашний' (100 Мбит)", "networks", 4500),
             ("Тариф 'Геймер' (500 Мбит)", "networks", 7900),
-            ("Бизнес-канал (1 Гбит)", "networks", 25000),
-            ("Городской телефон", "local_phone", 1200),
-            ("IP-TV (150 каналов)", "ip_tv", 2100),
-            ("SIP-Телефония", "external_calls", 3000),
-            ("Настройка ПО и серверов", "it_services", 5000),
+            ("Бизнес-канал 'Алматы-Плюс' (1 Гбит)", "networks", 25000), # Более локализованное название
+            ("Городской телефон (IP)", "local_phone", 1200),
+            ("IP-TV 'Отау' (150 каналов)", "ip_tv", 2100), # Казахский бренд
+            ("SIP-Телефония 'Global Call'", "external_calls", 3000),
+            ("Настройка корпоративной сети", "it_services", 5000),
         ]
         services = []
         for t, st, p in data:
@@ -159,36 +177,55 @@ class Command(BaseCommand):
 
     def _seed_engineers(self):
         self.stdout.write("Наем инженеров...")
-        names = ["Ерлан", "Дмитрий", "Азамат", "Виктор", "Максим", "Олег", "Рустем"]
+        # Усиление казахских имен
+        names = [
+            "Ерлан Инженеров", "Дмитрий Смирнов", "Азамат Айдаров", 
+            "Виктор Петров", "Максим Иванов", "Олег Семенов", 
+            "Рустем Нургалиев", "Бахтияр Султанов", "Марат Жумабаев"
+        ]
         engineers = []
         for n in names:
-            full_name = f"{n} Инженеров"
-            engineers.append(Engineer.objects.create(full_name=full_name))
+            # С вероятностью 20% инженер неактивен (например, в отпуске)
+            is_active = random.random() > 0.2
+            engineers.append(Engineer.objects.create(full_name=n, is_active=is_active))
         return engineers
 
     def _seed_clients(self, count):
         self.stdout.write(f"Регистрация {count} клиентов...")
         clients = []
         for i in range(count):
-            f_name = random.choice(FIRST_NAMES)
-            l_name = random.choice(LAST_NAMES)
-            full_name = f"{l_name} {f_name}"
             
-            is_company = random.random() < 0.15 # 15% что это юрлицо
-            if is_company:
-                full_name = f'ТОО "{l_name} и партнеры"'
+            is_company = random.random() < 0.25 # Увеличим шанс до 25% что это юрлицо
 
-            phone = f"+77{random.choice(['01','02','05','77'])}{random.randint(1000000, 9999999)}"
-            email = f"user_{i}@example.com"
+            if is_company:
+                company_name = random.choice(KAZAKH_COMPANY_WORDS)
+                full_name = f'{random.choice(COMPANY_PREFIXES)} "{company_name} {random.randint(1, 99)}"'
+                age = 0 # Для компаний возраст не важен
+            else:
+                # Генерация ФИО с учетом приоритета казахских имен/фамилий
+                l_name = random.choice(LAST_NAMES)
+                f_name = random.choice(FIRST_NAMES)
+                # Иногда добавим отчество (имя отца), для реалистичности
+                patronymic = random.choice(FIRST_NAMES) + "ұлы" if random.random() < 0.3 else ""
+                full_name = f"{l_name} {f_name} {patronymic}".strip()
+                age = random.randint(20, 70)
+
+            phone = f"+77{random.choice(['01','02','05','70','77','47','17'])}{random.randint(1000000, 9999999)}"
+            email = f"user_{i}_{random.randint(1, 1000)}@example.com"
             street = random.choice(STREETS)
-            address = f"г. Алматы, ул. {street}, д. {random.randint(1, 200)}, кв. {random.randint(1, 150)}"
+            
+            # Более разнообразные адреса (дом/офис, квартира/этаж)
+            address_type = "офис" if is_company else "кв."
+            address_num = random.randint(1, 150)
+            
+            address = f"г. Алматы, ул. {street}, д. {random.randint(1, 200)}, {address_type} {address_num}"
 
             client = Client.objects.create(
                 full_name=full_name,
                 email=email,
                 phone_number=phone,
                 service_address=address,
-                age=random.randint(20, 70),
+                age=age,
                 is_company=is_company
             )
             clients.append(client)
@@ -196,30 +233,42 @@ class Command(BaseCommand):
 
     def _seed_client_services(self, clients, services):
         self.stdout.write("Подключение услуг...")
+        # Словарь для быстрого поиска по типу
+        service_map = {s.service_type: s for s in services}
+        
         for client in clients:
             # Каждому клиенту от 1 до 3 услуг
             num_services = random.randint(1, 3)
-            # Если юрлицо - дадим IT услуги и бизнес канал с большей вероятностью
-            if client.is_company:
-                pool = [s for s in services if s.service_type in ['it_services', 'networks']]
-            else:
-                pool = [s for s in services if s.service_type != 'it_services']
             
-            # Fallback если пул пуст
-            if not pool: pool = services
+            pool = list(services) # Изначальный пул всех услуг
 
+            if client.is_company:
+                # Юрлицам обязательно дадим 'networks' (бизнес-канал) и повысим шанс на 'it_services'
+                # Уберем "Тариф 'Домашний'" из выбора для юрлиц
+                pool = [s for s in pool if s.title != "Тариф 'Домашний' (100 Мбит)"]
+                
+                # Добавляем IT-услугу
+                if service_map.get('it_services') and service_map['it_services'] not in pool:
+                    pool.append(service_map['it_services'])
+
+            # Избегаем дубликатов
             to_add = random.sample(pool, min(len(pool), num_services))
+            
             for s in to_add:
                 ClientService.objects.create(client=client, service=s)
 
     def _seed_tickets(self, clients, engineers, count):
         self.stdout.write(f"Генерация {count} заявок с историей...")
         
-        # Период: последние 90 дней
+        # Инженеры, которые могут быть назначены (активные)
+        active_engineers = [e for e in engineers if e.is_active]
+        if not active_engineers:
+             self.stdout.write(self.style.ERROR("Нет активных инженеров для назначения заявок!"))
+             active_engineers = engineers # Используем всех, если нет активных
+        
+        # Период: последние 120 дней
         end_date = timezone.now()
-        start_date = end_date - datetime.timedelta(days=90)
-
-        created_tickets = []
+        start_date = end_date - datetime.timedelta(days=120)
 
         for _ in range(count):
             client = random.choice(clients)
@@ -227,49 +276,64 @@ class Command(BaseCommand):
             # 1. Определяем, на какую услугу жалуемся
             client_services = ClientService.objects.filter(client=client).select_related('service')
             if not client_services.exists():
-                continue # Пропускаем клиентов без услуг
+                continue
             
             target_cs = random.choice(client_services)
             s_type = target_cs.service.service_type
 
             # 2. Выбираем сценарий проблемы
             scenarios = SCENARIOS.get(s_type, SCENARIOS["default"])
-            scenario = random.choice(scenarios)
+            # Взвешенный случайный выбор сценария на основе поля 'prob' (чем выше, тем чаще)
+            weights = [s['prob'] for s in scenarios]
+            scenario = random.choices(scenarios, weights=weights, k=1)[0]
 
-            # 3. Дата создания (случайная за последние 90 дней)
+            # 3. Дата создания (случайная за последние 120 дней)
             random_seconds = random.randint(0, int((end_date - start_date).total_seconds()))
             created_at = start_date + datetime.timedelta(seconds=random_seconds)
 
             # 4. Статус и инженер
-            # Чем старее заявка, тем вероятнее она закрыта
             days_passed = (end_date - created_at).days
             
             status = "new"
             closed_at = None
             final_res = None
             engineer = None
-
-            # Если заявке больше 5 дней, она скорее всего закрыта
-            if days_passed > 5:
+            
+            # Логика статусов:
+            if days_passed > 7 and random.random() < 0.9: # Очень старые с 90% вероятностью закрыты
                 status = "done"
-                engineer = random.choice(engineers)
-                # Закрыли через 2-48 часов после создания
-                duration = datetime.timedelta(hours=random.randint(2, 48))
-                closed_at = created_at + duration
-                final_res = scenario["fix"]
+            elif days_passed > 3 and random.random() < 0.7: # Средние с 70% вероятностью закрыты
+                 status = "done"
             elif days_passed > 1:
-                status = "in_progress"
-                engineer = random.choice(engineers)
+                status = random.choices(["in_progress", "done"], weights=[70, 30], k=1)[0] # 70% в работе, 30% закрыты быстро
             else:
                 # Совсем свежая
-                status = random.choice(["new", "new", "in_progress"]) # Чаще new
-                if status == "in_progress":
-                    engineer = random.choice(engineers)
+                status = random.choices(["new", "in_progress"], weights=[60, 40], k=1)[0]
 
-            # 5. Приоритет зависит от типа клиента и рандома
+            # Назначение инженера и закрытие
+            if status == "in_progress" or status == "done":
+                engineer = random.choice(active_engineers)
+                if status == "done":
+                    # Закрыли через 1-72 часа после создания
+                    duration = datetime.timedelta(hours=random.randint(1, 72))
+                    closed_at = created_at + duration
+                    # Добавим немного рандома в финальное решение
+                    final_res = f"{scenario['fix']}. {random.choice(['Проблема решена удаленно.', 'Выезд инженера не потребовался.', 'Клиент подтвердил работоспособность.'])}"
+                
+            # Если статус 'new', engineer остается None (ждет назначения)
+            
+            # 5. Приоритет
             base_priority = 50
-            if client.is_company: base_priority += 20
-            priority = min(100, base_priority + random.randint(-10, 20))
+            if client.is_company: base_priority += 20 # Приоритет для юрлиц выше
+            # Если требуется выезд, повышаем приоритет
+            if scenario["visit"] > 50: base_priority += 15
+            priority = min(100, max(10, base_priority + random.randint(-15, 10))) # Диапазон 10-100
+
+            # Почему нужен инженер (только если вероятность высока)
+            why_needed = None
+            if scenario["visit"] > 50 and status != "done":
+                 why_needed = f"Требуется выезд по адресу {client.service_address}. Причина: {scenario['desc']}"
+
 
             # Создаем объект
             ticket = SupportTicket.objects.create(
@@ -278,7 +342,7 @@ class Command(BaseCommand):
                 description=scenario["desc"],
                 priority_score=priority,
                 engineer_visit_probability=scenario["visit"],
-                why_engineer_needed="Требуется физический доступ" if scenario["visit"] > 50 else None,
+                why_engineer_needed=why_needed,
                 proposed_solution_engineer=scenario["eng"],
                 proposed_solution_client=scenario["client"],
                 final_resolution=final_res,
@@ -286,8 +350,5 @@ class Command(BaseCommand):
                 closed_at=closed_at
             )
 
-            # !ВАЖНО: Поле created_at имеет auto_now_add=True, поэтому при create() оно ставится в Current Time.
-            # Мы должны обновить его через update() напрямую в БД, чтобы обойти это.
+            # !!! ВАЖНО: Обновляем created_at, чтобы имитировать исторические данные
             SupportTicket.objects.filter(pk=ticket.pk).update(created_at=created_at)
-            
-            created_tickets.append(ticket)

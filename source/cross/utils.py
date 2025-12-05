@@ -1,6 +1,9 @@
-from apps.support.models import Client, Engineer
+from apps.support.models import Client
 
 
+# ============================================================
+# Сумма всех услуг клиента
+# ============================================================
 def calculate_client_total_price(client):
     """
     Возвращает суммарную стоимость всех услуг клиента.
@@ -8,57 +11,94 @@ def calculate_client_total_price(client):
     return sum(cs.service.price for cs in client.clientservice_set.all())
 
 
+# ============================================================
+# Коэффициент важности клиента (динамический)
+# ============================================================
 def calculate_client_importance_multiplier(client, min_coef=1.10, max_coef=1.20):
     """
     Динамически считает коэффициент важности клиента.
-    Использует ранжирование по сумме расходов среди всех клиентов.
-    
-    Ничего не сохраняет в БД.
+    Основан на перцентильном ранжировании по сумме расходов.
     """
-
-    # Сначала считаем total price клиента отдельно
     client_total = calculate_client_total_price(client)
 
-    # Берём суммы всех клиентов (только числа)
     all_totals = [
         calculate_client_total_price(c)
         for c in Client.objects.all()
     ]
 
-    # Если все нулевые — у всех одинаковая важность
-    if all(t == 0 for t in all_totals):
+    if not all_totals or all(t == 0 for t in all_totals):
         return min_coef
 
-    # Сортируем
     all_totals.sort()
-
-    # Ищем ранг текущего клиента
     rank = all_totals.index(client_total)
 
-    # Если клиент единственный
     if len(all_totals) == 1:
         p = 1.0
     else:
-        # Перцентиль
         p = rank / (len(all_totals) - 1)
 
-    # Преобразуем перцентиль в коэффициент
     coef = min_coef + p * (max_coef - min_coef)
-
     return round(coef, 4)
 
 
-def get_most_free_engineer():
+# ============================================================
+# Весовые коэффициенты типов услуг
+# ============================================================
+SERVICE_TYPE_WEIGHTS = {
+    "networks":      {"mult": 1.10, "points": 5},
+    "it_services":   {"mult": 1.08, "points": 3},
+    "external_calls":{"mult": 1.04, "points": 2},
+    "local_phone":   {"mult": 1.00, "points": 1},
+    "ip_tv":         {"mult": 1.02, "points": 1},
+}
+
+
+# ============================================================
+# ГЛАВНАЯ ФУНКЦИЯ: Финальный приоритет клиента (0–100)
+# ============================================================
+def calculate_final_priority(initial_priority: int, client: Client) -> int:
     """
-    Возвращает инженера с минимальным количеством активных заявок.
-    Если инженеров нет или все неактивны — возвращает None.
+    Вычисляет финальный приоритет заявки на основе:
+    - начального приоритета (AI) 30–70
+    - важности клиента (динамический перцентиль)
+    - корпоративного статуса
+    - состава услуг клиента
+    - веса типа каждой услуги (множитель + баллы)
     """
 
-    # Берём только активных инженеров
-    engineers = Engineer.objects.filter(is_active=True)
+    priority = float(initial_priority)
 
-    if not engineers.exists():
-        return None
+    # 1. Важность клиента (перцентиль затрат)
+    importance_multiplier = calculate_client_importance_multiplier(client)
+    priority *= importance_multiplier
 
-    # Используем Python-логику — проще и надёжнее
-    return min(engineers, key=lambda e: e.active_tickets_count)
+    # 2. Корпоративность клиента
+    if client.is_company:
+        priority *= 1.15
+
+    # 3. Услуги клиента
+    services = client.clientservice_set.all()
+
+    total_multiplier = 1.0
+    total_points = 0
+
+    for cs in services:
+        stype = cs.service.service_type
+        weights = SERVICE_TYPE_WEIGHTS.get(stype)
+
+        if weights:
+            total_multiplier *= weights["mult"]
+            total_points += weights["points"]
+
+    # Применяем множители и баллы
+    priority *= total_multiplier
+    priority += total_points
+
+    # 4. Дополнительные баллы за количество услуг
+    priority += min(2 * len(services), 10)
+
+    # 5. Нормализация 0–100
+    priority = max(0, min(priority, 100))
+
+    return int(round(priority))
+    
