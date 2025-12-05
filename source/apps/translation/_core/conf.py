@@ -25,7 +25,7 @@ AUTO_COPY_REFERENCE_TEXT: bool = True             # Auto-copy source_text → de
 
 LANGUAGE_EXCLUDED_URL_PREFIXES: list[str] = [
     "/api",
-    "/admin"
+    "/dj-admin"
 ]
 
 

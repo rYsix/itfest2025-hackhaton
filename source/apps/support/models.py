@@ -54,6 +54,7 @@ class Client(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         super().save(*args, **kwargs)
+
         if is_new:
             base = 100000
             self.account_number = str(base + self.id)
@@ -216,18 +217,28 @@ class SupportTicket(models.Model):
         help_text="Целое число процентов."
     )
 
-    proposed_solution = models.TextField(
+    # ============================================================
+    # Новые AI-поля
+    # ============================================================
+
+    proposed_solution_engineer = models.TextField(
         null=True,
         blank=True,
-        verbose_name="Предложенное решение",
-        help_text="Автоматически предложенное ИИ решение на основе похожих обращений. Как заметка оператору и инженеру."
+        verbose_name="Техническое решение (для инженера)"
     )
+
+    proposed_solution_client = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name="Рекомендация клиенту"
+    )
+
+    # ============================================================
 
     final_resolution = models.TextField(
         null=True,
         blank=True,
-        verbose_name="Финальное решение проблемы",
-        help_text="Итоговое решение инженера после завершения работы по заявке."
+        verbose_name="Финальное решение проблемы"
     )
 
     status = models.CharField(
@@ -248,9 +259,24 @@ class SupportTicket(models.Model):
         verbose_name="Закрыта"
     )
 
+    ticket_code = models.CharField(
+        max_length=12,
+        unique=True,
+        blank=True,
+        verbose_name="ID заявки"
+    )
+
     class Meta:
         verbose_name = "Заявка"
         verbose_name_plural = "Заявки"
 
     def __str__(self):
-        return f"Заявка #{self.id} от {self.client.full_name}"
+        return f"Заявка {self.ticket_code or self.id}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new:
+            self.ticket_code = f"{self.id:06d}"
+            super().save(update_fields=["ticket_code"])

@@ -1,0 +1,220 @@
+{% extends "front/base.html" %}
+{% load lang_tags %}
+
+{% block content %}
+
+<style>
+.page-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 0px 16px 40px;
+}
+.center-box {
+    width: 100%;
+    max-width: 540px;
+}
+
+/* Title */
+.page-title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 600;
+    color: #37474F;
+    margin-bottom: 24px;
+}
+
+/* Form card */
+.box {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 28px;
+    border: 1px solid #E0E6EA;
+}
+
+/* Form group */
+.form-group { margin-bottom: 20px; }
+.form-label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #455A64;
+}
+.form-label.required::after {
+    content: " *";
+    color: #D32F2F;
+}
+
+/* Inputs */
+.input-field,
+.textarea-field {
+    width: 100%;
+    font-size: 15px;
+    border-radius: 6px;
+    border: 1px solid #CFD8DC;
+    background: #FAFAFA;
+    color: #37474F;
+    transition: 0.2s;
+    box-sizing: border-box;
+}
+
+.input-field {
+    height: 48px;
+    padding: 0 14px;
+}
+
+.textarea-field {
+    min-height: 120px;
+    padding: 12px 14px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.input-field:focus,
+.textarea-field:focus {
+    border-color: #0288D1;
+    background: #ffffff;
+    outline: none;
+}
+
+/* Submit button */
+.btn-submit {
+    width: 100%;
+    height: 46px;
+    margin-top: 24px;
+    background: #0288D1;
+    border: none;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-submit:hover { background: #0277BD; }
+.btn-submit:active { transform: scale(0.98); }
+
+/* Hints */
+.form-hint {
+    font-size: 13px;
+    color: #78909C;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* Success */
+.success-message {
+    margin-top: 24px;
+    padding: 20px;
+    border-radius: 8px;
+    background: #E8F5E9;
+    border: 1px solid #C8E6C9;
+    text-align: center;
+}
+.success-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2E7D32;
+    margin-bottom: 8px;
+}
+.success-text {
+    font-size: 14px;
+    color: #558B2F;
+}
+.ticket-id {
+    margin-top: 12px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #A5D6A7;
+    display: inline-block;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2E7D32;
+}
+
+/* Error */
+.error-message {
+    margin-top: 24px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    background: #FFEBEE;
+    border: 1px solid #FFCDD2;
+    color: #C62828;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+    .box { padding: 24px 20px; }
+    .page-title { font-size: 22px; }
+}
+</style>
+
+
+<div class="page-wrapper">
+<div class="center-box">
+
+    <div class="page-title">{% tr "Создание заявки" %}</div>
+
+    <div class="box">
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Full Name -->
+            <div class="form-group">
+                <label for="full_name" class="form-label required">{% tr "ФИО" %}</label>
+                <input id="full_name" name="full_name" class="input-field"
+                       placeholder="{% tr 'Иванов Иван Иванович' %}"
+                       value="{{ full_name }}" required>
+            </div>
+
+            <!-- Account Number -->
+            <div class="form-group">
+                <label for="account_number" class="form-label required">{% tr "Лицевой счёт" %}</label>
+                <input id="account_number" name="account_number" class="input-field"
+                       placeholder="{% tr 'Например: 123456789' %}"
+                       value="{{ account_number }}" required>
+                <div class="form-hint">
+                    {% tr "Укажите номер вашего лицевого счёта из договора" %}
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group">
+                <label for="description" class="form-label required">
+                    {% tr "Описание проблемы" %}
+                </label>
+                <textarea id="description" name="description" class="textarea-field"
+                          placeholder="{% tr 'Опишите вашу проблему подробно...' %}">{{ description }}</textarea>
+                <div class="form-hint">
+                    {% tr "Чем подробнее вы опишете проблему, тем быстрее мы сможем помочь" %}
+                </div>
+            </div>
+
+            <button class="btn-submit">{% tr "Отправить заявку" %}</button>
+        </form>
+    </div>
+
+    {% if success %}
+    <div class="success-message">
+        <div class="success-title">{% tr "Заявка успешно создана!" %}</div>
+        <div class="success-text">
+            {% tr "Ваша заявка принята в обработку. Мы свяжемся с вами в ближайшее время." %}
+        </div>
+        {% if ticket.ticket_code %}
+        <div class="ticket-id">{% tr "Номер заявки " %} {{ ticket.ticket_code }}</div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="error-message">{% tr error %}</div>
+    {% endif %}
+
+</div>
+</div>
+
+{% endblock %}

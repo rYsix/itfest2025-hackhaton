@@ -93,7 +93,7 @@ class EngineerAdmin(admin.ModelAdmin):
 @admin.register(SupportTicket)
 class SupportTicketAdmin(admin.ModelAdmin):
     list_display = (
-        "id",
+        "ticket_code",
         "client",
         "engineer",
         "priority_score",
@@ -103,11 +103,45 @@ class SupportTicketAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "id",
+        "ticket_code",
         "client__full_name",
         "engineer__full_name",
+        "description",
     )
 
     list_filter = ("status",)
 
-    readonly_fields = ("created_at", "closed_at")
+    readonly_fields = (
+        "ticket_code",
+        "created_at",
+        "closed_at",
+    )
+
+    fieldsets = (
+        (
+            "Общая информация",
+            {
+                "fields": (
+                    "ticket_code",
+                    "client",
+                    "engineer",
+                    "status",
+                    "created_at",
+                    "closed_at",
+                )
+            },
+        ),
+        (
+            "Описание и решения",
+            {
+                "fields": (
+                    "description",
+                    "priority_score",
+                    "engineer_visit_probability",
+                    "proposed_solution_engineer",
+                    "proposed_solution_client",
+                    "final_resolution",
+                )
+            },
+        ),
+    )

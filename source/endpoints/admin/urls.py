@@ -1,7 +1,12 @@
 from django.urls import path
+from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
-    path("login/", views.login_view, name="login"),
-    path("logout/", views.logout_view, name="logout"),
+    # redirect /admin/ → /admin/dashboard/
+    path("", lambda request: redirect("admin_dashboard"), name="admin_root"),
+
+    # dashboard page
+    path("dashboard/", views.admin_dashboard_view, name="admin_dashboard"),
+
 ]

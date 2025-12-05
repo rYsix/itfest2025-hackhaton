@@ -148,19 +148,27 @@ class Command(BaseCommand):
             "Низкая скорость передачи данных",
         ]
 
-        ai_solutions = [
-            "Перезагрузить маршрутизатор и проверить кабель.",
-            "Обновить прошивку устройства.",
-            "Проверить настройки VLAN.",
-            "Рекомендовано проверить разъёмы и заменить патч-корд.",
-            "Проверить уровень сигнала Wi-Fi и сменить канал.",
+        engineer_solutions = [
+            "Проверить уровень оптического сигнала на ONU и состояние линка.",
+            "Диагностировать кабельный сегмент, возможен обрыв или высокий затух.",
+            "Перепрошить маршрутизатор до актуальной версии.",
+            "Проверить настройки VLAN и таблицу маршрутизации.",
+            "Произвести замену патч-корда и протестировать порт.",
+        ]
+
+        client_solutions = [
+            "Перезагрузите модем и убедитесь, что индикатор PON не мигает.",
+            "Проверьте, правильно ли подключены кабели.",
+            "Попробуйте отключить питание роутера на 30 секунд.",
+            "Убедитесь, что нет перегрузки Wi-Fi и устройства находятся рядом.",
+            "Переключите ТВ-приставку в другой HDMI-порт и перезапустите её.",
         ]
 
         final_resolutions = [
-            "Заменён кабель, проблема устранена.",
-            "Перенастроен маршрутизатор, подключение стабилизировано.",
-            "Произведена чистка оборудования, всё работает корректно.",
-            "Обнаружена проблема у клиента, предоставлена консультация.",
+            "Кабель заменён, соединение восстановлено.",
+            "Маршрутизатор перенастроен, ошибка устранена.",
+            "Обнаружено повреждение линии — произведён ремонт.",
+            "Дано удалённое сопровождение, проблема решена.",
         ]
 
         tickets_count = 15
@@ -169,7 +177,7 @@ class Command(BaseCommand):
         for _ in range(tickets_count):
 
             client = random.choice(clients)
-            engineer = random.choice(engineers) if random.random() > 0.2 else None
+            engineer = random.choice(engineers) if random.random() > 0.25 else None
 
             status = random.choice(["new", "in_progress", "done"])
 
@@ -177,16 +185,18 @@ class Command(BaseCommand):
                 client=client,
                 engineer=engineer,
                 description=random.choice(problem_texts),
-                priority_score=random.uniform(20, 95),
-                engineer_visit_probability=random.uniform(10, 90),
-                proposed_solution=random.choice(ai_solutions),
+                priority_score=random.randint(20, 95),
+                engineer_visit_probability=random.randint(10, 90),
+                proposed_solution_engineer=random.choice(engineer_solutions),
+                proposed_solution_client=random.choice(client_solutions),
                 status=status,
             )
 
-            # Если заявка закрыта → ставим final_resolution и closed_at
             if status == "done":
                 ticket.final_resolution = random.choice(final_resolutions)
-                ticket.closed_at = timezone.now() - timezone.timedelta(hours=random.randint(1, 72))
+                ticket.closed_at = timezone.now() - timezone.timedelta(
+                    hours=random.randint(1, 72)
+                )
                 ticket.save(update_fields=["final_resolution", "closed_at"])
 
             created.append(ticket)

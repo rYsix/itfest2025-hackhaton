@@ -1,4 +1,4 @@
-from apps.support.models import Client
+from apps.support.models import Client, Engineer
 
 
 def calculate_client_total_price(client):
@@ -46,3 +46,19 @@ def calculate_client_importance_multiplier(client, min_coef=1.10, max_coef=1.20)
     coef = min_coef + p * (max_coef - min_coef)
 
     return round(coef, 4)
+
+
+def get_most_free_engineer():
+    """
+    Возвращает инженера с минимальным количеством активных заявок.
+    Если инженеров нет или все неактивны — возвращает None.
+    """
+
+    # Берём только активных инженеров
+    engineers = Engineer.objects.filter(is_active=True)
+
+    if not engineers.exists():
+        return None
+
+    # Используем Python-логику — проще и надёжнее
+    return min(engineers, key=lambda e: e.active_tickets_count)

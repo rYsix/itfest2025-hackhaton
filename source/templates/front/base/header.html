@@ -19,17 +19,42 @@
         </div>
     </div>
 
-    <nav class="navbar">
-        <div class="navbar-container">
+<nav class="navbar">
+    <div class="navbar-container">
 
-            <a href="/" class="navbar-brand">
-                <img src="{% static 'favicons/fav.png' %}" alt="AqylNet">
-                <span>AqylNet</span>
-            </a>
+        <a href="/" class="navbar-brand">
+            <img src="{% static 'favicons/fav.png' %}" alt="AqylNet">
+            <span>AqylNet</span>
+        </a>
 
-            <div class="navbar-actions"></div>
-
+        <!-- Desktop links -->
+        <div class="navbar-actions">
+            <a href="/support/" class="nav-link">{% tr "Обратиться в поддержку" %}</a>
+            <a href="/support/check/" class="nav-link">{% tr "Проверить статус обращения" %}</a>
         </div>
-    </nav>
+
+        <!-- Mobile burger -->
+        <button class="burger" id="burgerBtn">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+    </div>
+
+    <!-- Mobile menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="/support/">{% tr "Обратиться в поддержку" %}</a>
+        <a href="/ticket/check/">{% tr "Проверить статус обращения" %}</a>
+    </div>
+
+</nav>
+
+<script>
+document.getElementById("burgerBtn").addEventListener("click", () => {
+    document.getElementById("mobileMenu").classList.toggle("open");
+});
+</script>
+
 
 </header>

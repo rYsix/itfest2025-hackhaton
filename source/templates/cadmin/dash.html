@@ -1,0 +1,323 @@
+{% extends "cadmin/base.html" %}
+{% load static %}
+{% load lang_tags %}
+
+{% block content %}
+
+<style>
+/* -----------------------------------------------------------
+   VARIABLES
+----------------------------------------------------------- */
+:root {
+    --primary: #2563eb;
+    --primary-light: #3b82f6;
+    --bg-body: #f3f4f6;
+    --text-dark: #111827;
+    --text-gray: #6b7280;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
+    --radius: 16px;
+
+    --status-new: #3b82f6;
+    --status-progress: #f59e0b;
+    --status-done: #10b981;
+}
+
+/* -----------------------------------------------------------
+   PAGE WRAPPER
+----------------------------------------------------------- */
+.admin-wrapper {
+    padding: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: Inter, system-ui, sans-serif;
+}
+
+/* -----------------------------------------------------------
+   HEADER
+----------------------------------------------------------- */
+.admin-header {
+    margin-bottom: 30px;
+}
+.admin-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 10px;
+}
+.admin-sub {
+    color: var(--text-gray);
+}
+
+/* -----------------------------------------------------------
+   KPI CARDS
+----------------------------------------------------------- */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 35px;
+}
+
+.kpi-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.kpi-value {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+.kpi-label {
+    margin-top: 4px;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--text-gray);
+    font-weight: 600;
+}
+
+/* -----------------------------------------------------------
+   STAT BOXES
+----------------------------------------------------------- */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    margin-bottom: 40px;
+}
+.stat-box {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+}
+.stat-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-dark);
+}
+.stat-list {
+    list-style: none;
+    padding: 0;
+}
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 13px;
+}
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+/* -----------------------------------------------------------
+   REQUEST CARDS
+----------------------------------------------------------- */
+.section-label {
+    font-size: 13px;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 35px 0 12px;
+}
+
+.req-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 20px;
+}
+
+.req-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.req-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.req-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+.req-status {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+}
+.req-status.new { background: var(--status-new); }
+.req-status.in_progress { background: var(--status-progress); }
+.req-status.done { background: var(--status-done); }
+
+.req-desc {
+    font-size: 13px;
+    color: var(--text-gray);
+    margin-bottom: 14px;
+    line-height: 1.5;
+    min-height: 50px;
+}
+
+.req-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-gray);
+}
+
+.btn-small {
+    padding: 6px 12px;
+    background: var(--primary);
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+/* FINISHED CARD */
+.req-card.finished {
+    opacity: 0.8;
+    background: #fafafa;
+}
+</style>
+
+<div class="admin-wrapper">
+
+    <!-- === HEADER === -->
+    <div class="admin-header">
+        <h1 class="admin-title">{% tr "Дешборд" %}</h1>
+        <div class="admin-sub">{% tr "Центр управления системой поддержки" %}</div>
+    </div>
+
+    <!-- === KPI === -->
+    <div class="kpi-grid">
+
+        <div class="kpi-card">
+            <div class="kpi-value">{{ clients|length }}</div>
+            <div class="kpi-label">{% tr "Клиенты" %}</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-value">{{ services|length }}</div>
+            <div class="kpi-label">{% tr "Услуги" %}</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-value">{{ engineers|length }}</div>
+            <div class="kpi-label">{% tr "Инженеры" %}</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-value">{{ tickets|length }}</div>
+            <div class="kpi-label">{% tr "Заявки" %}</div>
+        </div>
+
+    </div>
+
+    <!-- === DETAILS === -->
+    <div class="stat-grid">
+
+        <div class="stat-box">
+            <div class="stat-title">{% tr "Инженеры и активные заявки" %}</div>
+            <ul class="stat-list">
+                {% for e in engineers %}
+                <li class="stat-item">
+                    <span>{{ e.full_name }}</span>
+                    <span>{{ e.active_tickets_count }}</span>
+                </li>
+                {% empty %}
+                <li class="stat-item">{% tr "Нет инженеров" %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-title">{% tr "Самые популярные услуги" %}</div>
+            <ul class="stat-list">
+                {% for s in services|slice:":5" %}
+                <li class="stat-item">
+                    <span>{{ s.title }}</span>
+                    <span>{{ s.price }} ₸</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-title">{% tr "Клиенты и количество услуг" %}</div>
+            <ul class="stat-list">
+                {% for c in clients|slice:":5" %}
+                <li class="stat-item">
+                    <span>{{ c.full_name }}</span>
+                    <span>{{ c.clientservice_set.count }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- === ACTIVE REQUESTS === -->
+    <div class="section-label">{% tr "Активные заявки" %}</div>
+
+    <div class="req-grid">
+    {% for t in tickets %}
+        {% if t.status != "done" %}
+        <div class="req-card">
+            <div class="req-header">
+                <div class="req-title">{{ t.client.full_name }}</div>
+                <div class="req-status {{ t.status }}">{{ t.get_status_display }}</div>
+            </div>
+
+            <div class="req-desc">{{ t.description|truncatechars:120 }}</div>
+
+            <div class="req-footer">
+                <div>
+                    {% tr "Инженер" %}: {{ t.engineer.full_name|default:"—" }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+    </div>
+
+    <!-- === FINISHED === -->
+    <div class="section-label" style="margin-top:35px;">{% tr "Завершённые" %}</div>
+
+    <div class="req-grid">
+    {% for t in tickets %}
+        {% if t.status == "done" %}
+        <div class="req-card finished">
+            <div class="req-header">
+                <div class="req-title">{{ t.client.full_name }}</div>
+                <div class="req-status done">{% tr "Закрыта" %}</div>
+            </div>
+
+            <div class="req-desc">{{ t.description|truncatechars:160 }}</div>
+
+            <div class="req-footer">
+                <span>{{ t.closed_at|date:"d.m.Y H:i" }}</span>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+    </div>
+
+</div>
+
+{% endblock %}
