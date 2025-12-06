@@ -80,6 +80,30 @@
 }
 
 /* -----------------------------------------------------------
+   ANALYTICS CHART GRID
+----------------------------------------------------------- */
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 26px;
+    margin-bottom: 40px;
+}
+
+.chart-box {
+    background: var(--card-bg);
+    padding: 22px 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.chart-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    color: var(--text-dark);
+}
+
+/* -----------------------------------------------------------
    STAT BOXES
 ----------------------------------------------------------- */
 .stat-grid {
@@ -145,6 +169,7 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 12px;
+    align-items: center;
 }
 .req-title {
     font-size: 16px;
@@ -161,6 +186,18 @@
 .req-status.new { background: var(--status-new); }
 .req-status.in_progress { background: var(--status-progress); }
 .req-status.done { background: var(--status-done); }
+
+.req-assign-btn {
+    background: var(--primary);
+    color: white;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-left: 8px;
+    white-space: nowrap;
+}
 
 .req-desc {
     font-size: 13px;
@@ -187,7 +224,6 @@
     line-height: 1.45;
 }
 
-
 .req-footer {
     margin-top: auto;
     display: flex;
@@ -196,18 +232,6 @@
     color: var(--text-gray);
 }
 
-.btn-small {
-    padding: 6px 12px;
-    background: var(--primary);
-    border-radius: 8px;
-    color: white;
-    font-weight: 600;
-    font-size: 12px;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-/* FINISHED CARD */
 .req-card.finished {
     opacity: 0.8;
     background: #fafafa;
@@ -224,7 +248,6 @@
 
     <!-- === KPI === -->
     <div class="kpi-grid">
-
         <div class="kpi-card">
             <div class="kpi-value">{{ clients|length }}</div>
             <div class="kpi-label">{% tr "Клиенты" %}</div>
@@ -244,7 +267,31 @@
             <div class="kpi-value">{{ tickets|length }}</div>
             <div class="kpi-label">{% tr "Заявки" %}</div>
         </div>
+    </div>
 
+    <!-- === ANALYTICS CHART BLOCK === -->
+    <div class="section-label" style="margin-top:10px;">{% tr "Аналитика" %}</div>
+
+    <div class="chart-grid">
+        <div class="chart-box">
+            <div class="chart-title">{% tr "Статусы заявок" %}</div>
+            <canvas id="chartStatus"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-title">{% tr "Динамика заявок по дням" %}</div>
+            <canvas id="chartTimeline"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-title">{% tr "Загрузка инженеров" %}</div>
+            <canvas id="chartEngineers"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-title">{% tr "Популярность услуг" %}</div>
+            <canvas id="chartServices"></canvas>
+        </div>
     </div>
 
     <!-- === DETAILS === -->
@@ -291,110 +338,183 @@
     </div>
 
     <!-- === ACTIVE REQUESTS === -->
-<div class="section-label">{% tr "Активные заявки" %}</div>
+    <div class="section-label">{% tr "Активные заявки" %}</div>
 
-<div class="req-grid">
-{% for t in tickets %}
-    {% if t.status != "done" %}
-    <div class="req-card">
+    <div class="req-grid">
+    {% for t in tickets %}
+        {% if t.status != "done" %}
+        <div class="req-card">
 
-        <!-- HEADER -->
-        <div class="req-header">
-            <div class="req-title">
-                {{ t.client.full_name }} 
-                <span style="font-size:12px;color:#6b7280;">#{{ t.ticket_code }}</span>
+            <!-- HEADER -->
+            <div class="req-header">
+                <div class="req-title">
+                    {{ t.client.full_name }} 
+                    <span style="font-size:12px;color:#6b7280;">#{{ t.ticket_code }}</span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <div class="req-status {{ t.status }}">{% tr t.get_status_display %}</div>
+
+
+                </div>
             </div>
-            <div class="req-status {{ t.status }}">{{ t.get_status_display }}</div>
-        </div>
 
-        <!-- DESCRIPTION -->
-        <div class="req-desc">
-            <strong>{% tr "Описание" %}:</strong><br>
-            {{ t.description|truncatechars:180 }}
-        </div>
+            <!-- DESCRIPTION -->
+            <div class="req-desc">
+                <strong>{% tr "Описание" %}:</strong><br>
+                {{ t.description|truncatechars:180 }}
+            </div>
 
-        <!-- PRIORITY + PROBABILITY -->
-        <div class="req-info">
-            <div><strong>{% tr "Приоритет" %}:</strong> {{ t.priority_score }}/100</div>
-            <div><strong>{% tr "Вероятность визита" %}:</strong> {{ t.engineer_visit_probability }}%</div>
-        </div>
+            <!-- PRIORITY + PROBABILITY -->
+            <div class="req-info">
+                <div><strong>{% tr "Приоритет" %}:</strong> {{ t.priority_score }}/100</div>
+                <div><strong>{% tr "Вероятность визита" %}:</strong> {{ t.engineer_visit_probability }}%</div>
+            </div>
 
-        {% if t.why_engineer_needed %}
-        <div class="req-info-block">
-            <strong>{% tr "Почему требуется инженер" %}:</strong><br>
-            {{ t.why_engineer_needed|truncatechars:200 }}
+            {% if t.why_engineer_needed %}
+            <div class="req-info-block">
+                <strong>{% tr "Почему требуется инженер" %}:</strong><br>
+                {{ t.why_engineer_needed|truncatechars:200 }}
+            </div>
+            {% endif %}
+
+            {% if t.proposed_solution_engineer %}
+            <div class="req-info-block">
+                <strong>{% tr "Техническая рекомендация" %}:</strong><br>
+                {{ t.proposed_solution_engineer|truncatechars:200 }}
+            </div>
+            {% endif %}
+
+            {% if t.proposed_solution_client %}
+            <div class="req-info-block">
+                <strong>{% tr "Рекомендация клиенту" %}:</strong><br>
+                {{ t.proposed_solution_client|truncatechars:200 }}
+            </div>
+            {% endif %}
+
+            <!-- FOOTER -->
+            <div class="req-footer">
+                <div>
+                    {% tr "Инженер" %}: {{ t.engineer.full_name|default:"—" }}
+                </div>
+                <div style="font-size:11px;color:#9ca3af;">
+                    {{ t.created_at|date:"d.m.Y H:i" }}
+                </div>
+                {% if not t.engineer %}
+                    <a href="{% url 'assign_engineer' ticket_id=t.id  %}" class="req-assign-btn">
+                        {% tr "Назначить инженера" %}
+                    </a>
+                    {% endif %}
+            </div>
+
         </div>
         {% endif %}
-
-        {% if t.proposed_solution_engineer %}
-        <div class="req-info-block">
-            <strong>{% tr "Техническая рекомендация" %}:</strong><br>
-            {{ t.proposed_solution_engineer|truncatechars:200 }}
-        </div>
-        {% endif %}
-
-        {% if t.proposed_solution_client %}
-        <div class="req-info-block">
-            <strong>{% tr "Рекомендация клиенту" %}:</strong><br>
-            {{ t.proposed_solution_client|truncatechars:200 }}
-        </div>
-        {% endif %}
-
-        <!-- FOOTER -->
-        <div class="req-footer">
-            <div>
-                {% tr "Инженер" %}: {{ t.engineer.full_name|default:"—" }}
-            </div>
-            <div style="font-size:11px;color:#9ca3af;">
-                {{ t.created_at|date:"d.m.Y H:i" }}
-            </div>
-        </div>
-
+    {% endfor %}
     </div>
-    {% endif %}
-{% endfor %}
-</div>
 
+    <!-- === FINISHED === -->
+    <div class="section-label" style="margin-top:35px;">{% tr "Завершённые" %}</div>
 
-<!-- === FINISHED === -->
-<div class="section-label" style="margin-top:35px;">{% tr "Завершённые" %}</div>
+    <div class="req-grid">
+    {% for t in tickets %}
+        {% if t.status == "done" %}
+        <div class="req-card finished">
 
-<div class="req-grid">
-{% for t in tickets %}
-    {% if t.status == "done" %}
-    <div class="req-card finished">
-
-        <div class="req-header">
-            <div class="req-title">
-                {{ t.client.full_name }}
-                <span style="font-size:12px;color:#6b7280;">#{{ t.ticket_code }}</span>
+            <div class="req-header">
+                <div class="req-title">
+                    {{ t.client.full_name }}
+                    <span style="font-size:12px;color:#6b7280;">#{{ t.ticket_code }}</span>
+                </div>
+                <div class="req-status done">{% tr "Закрыта" %}</div>
             </div>
-            <div class="req-status done">{% tr "Закрыта" %}</div>
-        </div>
 
-        <div class="req-desc">
-            <strong>{% tr "Описание" %}:</strong><br>
-            {{ t.description|truncatechars:200 }}
-        </div>
+            <div class="req-desc">
+                <strong>{% tr "Описание" %}:</strong><br>
+                {{ t.description|truncatechars:200 }}
+            </div>
 
-        {% if t.final_resolution %}
-        <div class="req-info-block">
-            <strong>{% tr "Финальное решение" %}:</strong><br>
-            {{ t.final_resolution|truncatechars:200 }}
+            {% if t.final_resolution %}
+            <div class="req-info-block">
+                <strong>{% tr "Финальное решение" %}:</strong><br>
+                {{ t.final_resolution|truncatechars:200 }}
+            </div>
+            {% endif %}
+
+            <div class="req-footer">
+                <span style="font-size:12px;">
+                    {% tr "Закрыта" %}: {{ t.closed_at|date:"d.m.Y H:i" }}
+                </span>
+            </div>
         </div>
         {% endif %}
-
-        <div class="req-footer">
-            <span style="font-size:12px;">
-                {% tr "Закрыта" %}: {{ t.closed_at|date:"d.m.Y H:i" }}
-            </span>
-        </div>
+    {% endfor %}
     </div>
-    {% endif %}
-{% endfor %}
-</div>
-
 
 </div>
+
+<!-- ========================= CHART.JS ========================= -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ticketStatusCounts = JSON.parse('{{ ticket_status_counts_json|escapejs }}');
+const ticketTimeline = JSON.parse('{{ ticket_timeline_json|escapejs }}');
+const engineerLoad = JSON.parse('{{ engineer_load_json|escapejs }}');
+const serviceUsage = JSON.parse('{{ service_usage_json|escapejs }}');
+
+/* STATUS PIE */
+new Chart(document.getElementById("chartStatus"), {
+    type: "pie",
+    data: {
+        labels: ticketStatusCounts.map(x => x.status),
+        datasets: [{
+            data: ticketStatusCounts.map(x => x.total),
+            backgroundColor: ["#3b82f6", "#f59e0b", "#10b981"],
+        }]
+    }
+});
+
+/* TIMELINE */
+new Chart(document.getElementById("chartTimeline"), {
+    type: "line",
+    data: {
+        labels: ticketTimeline.map(x => x.day),
+        datasets: [{
+            label: "{% tr 'Заявки' %}",
+            data: ticketTimeline.map(x => x.total),
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37,99,235,0.2)",
+            fill: true,
+            tension: 0.3
+        }]
+    }
+});
+
+/* ENGINEER LOAD */
+new Chart(document.getElementById("chartEngineers"), {
+    type: "bar",
+    data: {
+        labels: engineerLoad.map(x => x.full_name),
+        datasets: [{
+            label: "{% tr 'Заявок' %}",
+            data: engineerLoad.map(x => x.total_tickets),
+            backgroundColor: "#3b82f6"
+        }]
+    }
+});
+
+/* SERVICE POPULARITY */
+new Chart(document.getElementById("chartServices"), {
+    type: "bar",
+    data: {
+        labels: serviceUsage.map(x => x.title),
+        datasets: [{
+            label: "{% tr 'Пользователей' %}",
+            data: serviceUsage.map(x => x.total_users),
+            backgroundColor: "#10b981"
+        }]
+    },
+    options: { indexAxis: "y" }
+});
+</script>
 
 {% endblock %}

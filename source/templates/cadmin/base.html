@@ -53,7 +53,7 @@
             {% if messages %}
                 {% for message in messages %}
                     <div class="msg-banner {{ message.tags }}">
-                        <span>{% tr message %}</span>
+                        <span>{% tr message.message %}</span>
                         <span class="msg-close" onclick="this.parentElement.remove()">×</span>
                     </div>
                 {% endfor %}

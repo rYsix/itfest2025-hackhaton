@@ -10,6 +10,7 @@ CORE OpenAI JSON Helper + Ticket AI Resolver (Unified).
 - Классификатор «телеком / не телеком»
 - <<< NEW >>> Запрет на любые фразы «позвоните нам», «обратитесь в поддержку»
 - <<< NEW >>> Мы уже техподдержка: не перенаправлять клиента
+- <<< NEW >>> AI выбор оптимального инженера под заявку
 """
 
 import logging
@@ -17,7 +18,7 @@ from django.conf import settings
 from openai import OpenAI
 from pydantic import BaseModel
 
-from apps.support.models import SupportTicket
+from apps.support.models import SupportTicket, Engineer
 from apps.translation._core.active_language_context import get_language
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ _client = OpenAI(api_key=settings.OPENAI_KEY)
 
 
 # ============================================================
-# STRICT JSON SCHEMA
+# STRICT JSON SCHEMAS
 # ============================================================
 
 class FullAISchema(BaseModel):
@@ -40,6 +41,13 @@ class TelecomCheckSchema(BaseModel):
     is_telecom: bool
 
 
+class EngineerPickSchema(BaseModel):
+    engineer_id: int
+    engineer_name: str
+    reason: str
+    confidence: int
+
+
 # ============================================================
 # MAIN CLASS
 # ============================================================
@@ -51,6 +59,9 @@ class OpenAIUseCase:
     # ------------------------------------------------------------
     @staticmethod
     def _request(system_prompt: str, user_text: str, schema, model: str = "gpt-4o-mini"):
+        """
+        Унифицированный строгий JSON-запрос.
+        """
         try:
             result = _client.beta.chat.completions.parse(
                 model=model,
@@ -65,7 +76,6 @@ class OpenAIUseCase:
         except Exception:
             logger.exception("OpenAI strict JSON request failed")
             return None
-
 
     # ============================================================
     # <<< NEW >>> TELECOM CLASSIFIER
@@ -112,7 +122,6 @@ class OpenAIUseCase:
 
         return bool(result and result.get("is_telecom", False))
 
-
     # ============================================================
     # UNIFIED TICKET AI
     # ============================================================
@@ -121,24 +130,27 @@ class OpenAIUseCase:
 
         # Язык для client_advice
         lang = get_language()
-        lang_human = {"ru": "русском", "kk": "қазақ", "en": "English"}.get(lang, "English")
+        lang_human = {
+            "ru": "русском",
+            "kk": "қазақ",
+            "en": "English"
+        }.get(lang, "English")
 
         # Истории
         hist_res = "\n".join([
             f"- {t.final_resolution}"
-            for t in SupportTicket.objects.exclude(final_resolution=None).exclude(final_resolution="")
-            .order_by("-created_at")[:30]
+            for t in SupportTicket.objects.exclude(final_resolution=None)
+                                          .exclude(final_resolution="")
+                                          .order_by("-created_at")[:30]
         ]) or "(нет данных)"
 
         hist_prob = "\n".join([
             f"- {t.description}\n  Вероятность: {t.engineer_visit_probability}"
             for t in SupportTicket.objects.exclude(engineer_visit_probability=None)
-            .order_by("-created_at")[:40]
+                                          .order_by("-created_at")[:40]
         ]) or "(нет данных)"
 
-        # ============================================================
-        # SYSTEM PROMPT — САМЫЙ ЖЁСТКИЙ
-        # ============================================================
+        # SYSTEM PROMPT
         system_prompt = (
             "Ты — единая AI-система технической поддержки АО «Казахтелеком». "
             "Ты уже являешься службой поддержки. "
@@ -163,8 +175,7 @@ class OpenAIUseCase:
             '  "engineer_probability_explanation": "",\n'
             '  "initial_priority": 30\n'
             "}\n\n"
-            "БЕЗ любых дополнительных советов.\n"
-            "Никаких бытовых рекомендаций («попробуйте», «почистите», «перезагрузите»).\n\n"
+            "БЕЗ любых дополнительных советов.\n\n"
 
             "------------------------------------------------------------\n"
             "   ЕСЛИ ПРОБЛЕМА ТЕЛЕКОМ — ГЕНЕРИРУЙ РЕАЛЬНЫЕ ДЕЙСТВИЯ\n"
@@ -177,9 +188,7 @@ class OpenAIUseCase:
             "Вернуть только JSON. Без markdown. Не объясняй правила."
         )
 
-        # ============================================================
         # USER PROMPT
-        # ============================================================
         user_prompt = (
             f"Описание проблемы:\n{description}\n\n"
             f"Возраст клиента: {age}\n\n"
@@ -194,4 +203,71 @@ class OpenAIUseCase:
             system_prompt=system_prompt,
             user_text=user_prompt,
             schema=FullAISchema,
+        )
+
+    # ============================================================
+    # <<< NEW >>> AI ENGINEER PICKER
+    # ============================================================
+    @staticmethod
+    def pick_engineer_for_ticket(ticket: SupportTicket):
+        """
+        Выбор наиболее подходящего инженера:
+        - анализ описания заявки
+        - опыт инженеров
+        - похожие решённые заявки
+        - текущая нагрузка
+        - возраст клиента (для более деликатной работы)
+        """
+
+        engineers = list(Engineer.objects.filter(is_active=True))
+        if not engineers:
+            return None
+
+        # Собираем историю инженеров
+        engineers_payload = []
+        for e in engineers:
+            engineers_payload.append({
+                "id": e.id,
+                "name": e.full_name,
+                "active_tickets": e.supportticket_set.filter(
+                    status__in=["new", "in_progress"]
+                ).count(),
+                "solved_descriptions": list(
+                    SupportTicket.objects.filter(engineer=e, status="done")
+                    .values_list("description", flat=True)[:25]
+                ),
+            })
+
+        system_prompt = (
+            "Ты — интеллектуальная система распределения инженеров Казахтелекома.\n"
+            "Твоя задача — выбрать лучшего инженера под текущий тикет.\n\n"
+
+            "Критерии выбора:\n"
+            "1) Похожесть текущей проблемы на ранее решённые инженером.\n"
+            "2) Опыт инженера.\n"
+            "3) Текущая загрузка — избегай инженеров, у которых слишком много заявок.\n"
+            "4) Возраст клиента — пожилым клиентам предпочтительнее более опытные инженеры.\n"
+            "5) Баланс качества и скорости.\n\n"
+
+            "Верни строго JSON:\n"
+            "{\n"
+            '  "engineer_id": <id>,\n'
+            '  "engineer_name": "<имя>",\n'
+            '  "reason": "<почему выбран>",\n'
+            '  "confidence": 0–100\n'
+            "}\n"
+            "Без markdown. Без пояснений вне JSON."
+        )
+
+        user_prompt = (
+            f"Описание проблемы: {ticket.description}\n\n"
+            f"Возраст клиента: {ticket.client.age}\n\n"
+            f"Инженеры и их история: {engineers_payload}\n\n"
+            "Выбери оптимального инженера."
+        )
+
+        return OpenAIUseCase._request(
+            system_prompt=system_prompt,
+            user_text=user_prompt,
+            schema=EngineerPickSchema
         )
