@@ -1,58 +1,203 @@
+{% extends "front/base.html" %}
 {% load static %}
 {% load lang_tags %}
 
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% tr 'Вход — Hackaton ITFest' %}</title>
-    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
-</head>
-<body>
+{% block title %}AqylNet — {% tr "Вход администратора" %}{% endblock %}
 
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <div class="auth-logo">
-            <h1>{% tr 'Hackaton ITFest' %}</h1>
+{% block content %}
+
+<style>
+/* ====== PAGE LAYOUT ====== */
+.login-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+    font-family: Inter, system-ui, sans-serif;
+}
+
+/* ====== CARD ====== */
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 12px;
+    border: 1px solid #E0E6EA;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* ====== TITLES ====== */
+.login-title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 700;
+    color: #37474F;
+    margin-bottom: 8px;
+}
+
+.login-subtitle {
+    text-align: center;
+    font-size: 15px;
+    color: #607D8B;
+    margin-bottom: 26px;
+}
+
+/* ====== LABEL ====== */
+.form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #455A64;
+    margin-bottom: 8px;
+}
+
+/* ====== INPUT ====== */
+.input-field {
+    width: 100%;
+    height: 42px;
+    border: 1px solid #CFD8DC;
+    border-radius: 6px;
+    padding: 0 14px;
+    font-size: 14px;
+    color: #263238;
+    background: #fff;
+}
+.input-field:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33,150,243,0.15);
+}
+
+/* ====== BUTTON ====== */
+.submit-btn {
+    width: 100%;
+    height: 46px;
+    margin-top: 20px;
+    background: #2196F3;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.submit-btn:hover {
+    background: #1976D2;
+}
+
+/* ====== ERRORS ====== */
+.error-box {
+    background: #FFEBEE;
+    border: 1px solid #EF9A9A;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    color: #B71C1C;
+    font-size: 14px;
+}
+
+/* ====== DEMO ACCOUNTS ====== */
+.demo-title {
+    margin-top: 28px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #37474F;
+}
+
+.demo-list {
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: #F5F8FA;
+    border: 1px solid #E0E6EA;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #455A64;
+    line-height: 1.6;
+}
+.demo-btn {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 4px 8px;
+    background: #ECEFF1;
+    border: 1px solid #CFD8DC;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.15s;
+}
+.demo-btn:hover {
+    background: #E0E6EA;
+}
+</style>
+
+<div class="login-wrapper">
+    <div class="login-card">
+
+        <h1 class="login-title">AqylNet</h1>
+        <div class="login-subtitle">{% tr "Вход для администраторов" %}</div>
+
+        {% if error %}
+        <div class="error-box">
+            {{ error }}
         </div>
+        {% endif %}
 
-        <form method="post" class="auth-form" novalidate>
+        <form method="POST">
             {% csrf_token %}
 
-            <label for="email">{% tr 'E-mail' %}</label>
-            <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="{% tr 'Введите e-mail' %}"
-                required
-            >
+            <label class="form-label">{% tr "Email" %}</label>
+            <input type="email" id="emailInput" name="email" class="input-field" required>
 
-            <label for="password">{% tr 'Пароль' %}</label>
-            <input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="{% tr 'Введите пароль' %}"
-                required
-            >
+            <label class="form-label" style="margin-top:16px;">{% tr "Пароль" %}</label>
+            <input type="password" id="passwordInput" name="password" class="input-field" required>
 
-            <button type="submit" class="auth-btn">
-                {% tr 'Войти' %}
+            <button type="submit" class="submit-btn">
+                {% tr "Войти" %}
             </button>
         </form>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="auth-message {{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
+        <!-- DEMO ACCOUNTS -->
+        <div class="demo-title">{% tr "Демо-аккаунты для входа" %}</div>
+
+        <div class="demo-list">
+            <div>
+                Email: <code>admin@admin.kz</code> | Пароль: <code>Admin123!</code>
+                <br><span class="demo-btn" onclick="fillDemo('admin@admin.kz', 'Admin123!')">Заполнить</span>
+            </div>
+
+            <div style="margin-top:10px;">
+                Email: <code>test@test.kz</code> | Пароль: <code>Test123!</code>
+                <br><span class="demo-btn" onclick="fillDemo('test@test.kz', 'Test123!')">Заполнить</span>
+            </div>
+
+            <div style="margin-top:10px;">
+                Email: <code>test@test.test</code> | Пароль: <code>Test123!</code>
+                <br><span class="demo-btn" onclick="fillDemo('test@test.test', 'Test123!')">Заполнить</span>
+            </div>
+
+            <div style="margin-top:10px;">
+                Email: <code>example@example.com</code> | Пароль: <code>Example123!</code>
+                <br><span class="demo-btn" onclick="fillDemo('example@example.com', 'Example123!')">Заполнить</span>
+            </div>
+        </div>
 
     </div>
 </div>
 
-</body>
-</html>
+<script>
+function fillDemo(email, password) {
+    document.getElementById("emailInput").value = email;
+    document.getElementById("passwordInput").value = password;
+
+    // небольшая визуальная подсветка
+    document.getElementById("emailInput").style.borderColor = "#2196F3";
+    document.getElementById("passwordInput").style.borderColor = "#2196F3";
+    setTimeout(() => {
+        document.getElementById("emailInput").style.borderColor = "#CFD8DC";
+        document.getElementById("passwordInput").style.borderColor = "#CFD8DC";
+    }, 700);
+}
+</script>
+
+{% endblock %}
