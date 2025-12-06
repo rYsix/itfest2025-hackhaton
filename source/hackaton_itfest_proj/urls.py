@@ -1,13 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from django.http import JsonResponse
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 from cross import bot
-from cross.openai_use_case import OpenAIUseCase
 
 
 # ============================================================
@@ -43,6 +42,7 @@ def bot_status_view(request):
         json_dumps_params={"ensure_ascii": False}
     )
 
+
 # ============================================================
 # URLS
 # ============================================================
@@ -50,18 +50,24 @@ def bot_status_view(request):
 urlpatterns = [
     path("dj-admin/", admin.site.urls),
 
-    # Redirect root → /support/
+    # root redirect → /support/
     path("", lambda request: redirect("/support/")),
 
-    # auth endpoints
+    # AUTH
     path("auth/", include("endpoints.userauth.urls")),
 
-    # support endpoints (обрабатывает /support/)
+    # SUPPORT
     path("support/", include("endpoints.support.urls")),
 
+    # ADMIN PANEL
     path("admin/", include("endpoints.admin.urls")),
 
-    # BOT CONTROL
+    # BOT API — теперь доступно прямо на корне
+    # /api/... → отсюда
+    # /bot/... → отсюда
+    path("", include("endpoints.botwapi.urls")),
+
+    # BOT CONTROL BUTTONS
     path("bot-start/", bot_start_view),
     path("bot-stop/", bot_stop_view),
     path("bot-status/", bot_status_view),

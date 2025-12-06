@@ -1,0 +1,176 @@
+{% extends "front/base.html" %}
+{% load lang_tags %}
+
+{% block content %}
+
+<style>
+/* ============ LAYOUT ============ */
+.page-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 0px 16px 40px;
+}
+.center-box {
+    width: 100%;
+    max-width: 540px;
+}
+
+/* Title */
+.page-title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 600;
+    color: #37474F;
+    margin-bottom: 24px;
+}
+
+/* Chat container */
+.chat-box {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 18px;
+    border: 1px solid #E0E6EA;
+    height: 300px; /* меньше */
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* Messages */
+.msg-wrap {
+    display: flex;
+    margin-bottom: 14px;
+}
+
+.msg {
+    padding: 12px 14px;
+    border-radius: 10px;
+    max-width: 75%;
+    font-size: 15px;
+    line-height: 1.45;
+}
+
+/* User (right) */
+.msg-user-wrap {
+    justify-content: flex-end;
+}
+.msg-user {
+    background: #E3F2FD;
+    color: #0D47A1;
+    border: 1px solid #BBDEFB;
+}
+
+/* Bot (left) */
+.msg-bot-wrap {
+    justify-content: flex-start;
+}
+.msg-bot {
+    background: #F1F8E9;
+    color: #33691E;
+    border: 1px solid #DCEDC8;
+}
+
+/* Input */
+.input-large {
+    width: 100%;
+    height: 48px;
+    padding: 0 14px;
+    font-size: 15px;
+    border-radius: 6px;
+    border: 1px solid #CFD8DC;
+    background: #FAFAFA;
+    color: #37474F;
+    transition: 0.2s;
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+.input-large:focus {
+    border-color: #0288D1;
+    background: #ffffff;
+    outline: none;
+}
+
+/* Button */
+.btn-large {
+    width: 100%;
+    height: 46px;
+    margin-top: 12px;
+    background: #0288D1;
+    border: none;
+    border-radius: 6px;
+    color: #ffffff;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-large:hover {
+    background: #0277BD;
+}
+</style>
+
+
+<div class="page-wrapper">
+<div class="center-box">
+
+    <div class="page-title">{% tr "Чат с ассистентом" %}</div>
+
+    <div id="chatBox" class="chat-box"></div>
+
+    <input id="chatInput"
+           class="input-large"
+           placeholder="{% tr 'Введите сообщение...' %}"
+           onkeydown="if(event.key==='Enter'){sendMessage()}">
+
+    <button class="btn-large" onclick="sendMessage()">
+        {% tr "Отправить" %}
+    </button>
+
+</div>
+</div>
+
+
+<script>
+function scrollChat() {
+    const box = document.getElementById("chatBox");
+    box.scrollTop = box.scrollHeight;
+}
+
+async function sendMessage() {
+    const box = document.getElementById("chatBox");
+    const input = document.getElementById("chatInput");
+    const text = input.value.trim();
+    if (!text) return;
+
+    // USER MESSAGE (right)
+    box.innerHTML += `
+        <div class="msg-wrap msg-user-wrap">
+            <div class="msg msg-user">${text}</div>
+        </div>
+    `;
+    scrollChat();
+    input.value = "";
+
+    // Prepare POST
+    const formData = new FormData();
+    formData.append("text", text);
+    formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+    const response = await fetch("/api/send/", {
+        method: "POST",
+        body: formData,
+    });
+
+    const data = await response.json();
+
+    const reply = data.reply || "…";
+
+    // BOT MESSAGE (left)
+    box.innerHTML += `
+        <div class="msg-wrap msg-bot-wrap">
+            <div class="msg msg-bot">${reply}</div>
+        </div>
+    `;
+    scrollChat();
+}
+</script>
+
+{% endblock %}
