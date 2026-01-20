@@ -8,7 +8,6 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 from cross import bot
 
-
 # ============================================================
 # BOT CONTROL VIEWS
 # ============================================================
@@ -62,16 +61,16 @@ urlpatterns = [
     # ADMIN PANEL
     path("admin/", include("endpoints.admin.urls")),
 
-    # BOT API — теперь доступно прямо на корне
-    # /api/... → отсюда
-    # /bot/... → отсюда
+    # BOT API
     path("", include("endpoints.botwapi.urls")),
 
-    # BOT CONTROL BUTTONS
+    # BOT CONTROL
     path("bot-start/", bot_start_view),
     path("bot-stop/", bot_stop_view),
     path("bot-status/", bot_status_view),
+
 ]
+
 
 
 # ============================================================

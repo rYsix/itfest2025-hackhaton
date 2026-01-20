@@ -22,6 +22,9 @@ from pydantic import BaseModel
 from apps.support.models import SupportTicket, Engineer
 from apps.translation._core.active_language_context import get_language
 
+import re
+
+
 logger = logging.getLogger(__name__)
 _client = OpenAI(api_key=settings.OPENAI_KEY)
 
@@ -36,6 +39,10 @@ class FullAISchema(BaseModel):
     engineer_probability: int
     engineer_probability_explanation: str
     initial_priority: int
+
+class MailSupportCheckSchema(BaseModel):
+    is_support_request: bool
+    reason: str
 
 
 class TelecomCheckSchema(BaseModel):
@@ -346,3 +353,69 @@ class OpenAIUseCase:
                 "ru": "Произошла ошибка. Попробуйте ещё раз."
             }
             return fallback.get(lang, fallback["ru"])
+        
+        
+    # ============================================================
+    # <<< NEW >>> MAIL → TELECOM SUPPORT AI CHECK
+    # ============================================================
+    @staticmethod
+    def ai_check_telecom_support_mail(subject: str, description: str) -> bool:
+        """
+        True — если письмо:
+        - является обращением в техподдержку Казахтелеком
+        - содержит ФИО клиента
+        - содержит лицевой счёт
+        False — во всех остальных случаях
+        """
+
+        if not subject or not description:
+            return False
+
+        system_prompt = (
+            "Ты — строгий AI-классификатор службы технической поддержки "
+            "АО «Казахтелеком».\n\n"
+
+            "Твоя задача — определить, ЯВЛЯЕТСЯ ли письмо полноценным "
+            "обращением в техническую поддержку.\n\n"
+
+            "Верни TRUE только если одновременно выполнены ВСЕ условия:\n"
+            "1. Клиент обращается именно по вопросам телеком-услуг "
+            "(интернет, GPON, Wi-Fi, ONU/ONT, IPTV, связь и т.д.).\n"
+            "2. В тексте письма присутствует ФИО клиента (любая естественная форма).\n"
+            "3. В тексте письма явно присутствует лицевой счёт клиента.\n\n"
+
+            "Если хотя бы одно условие не выполнено — верни FALSE.\n\n"
+
+            "❌ НЕ пытайся угадывать\n"
+            "❌ НЕ будь либеральным\n"
+            "✅ Если есть сомнение — False\n\n"
+
+            "Верни СТРОГО JSON:\n"
+            "{\n"
+            "  \"is_support_request\": true | false,\n"
+            "  \"reason\": \"краткое объяснение\"\n"
+            "}"
+        )
+
+        user_prompt = (
+            f"ТЕМА ПИСЬМА:\n{subject}\n\n"
+            f"ТЕКСТ ПИСЬМА:\n{description}\n\n"
+            "Проанализируй и верни только JSON."
+        )
+
+        result = OpenAIUseCase._request(
+            system_prompt=system_prompt,
+            user_text=user_prompt,
+            schema=MailSupportCheckSchema,
+        )
+
+        if not result:
+            return False
+
+        logger.info(
+            "Mail AI support check: %s | reason=%s",
+            result["is_support_request"],
+            result["reason"]
+        )
+
+        return bool(result.get("is_support_request"))

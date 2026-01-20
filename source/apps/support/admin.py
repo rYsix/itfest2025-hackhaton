@@ -113,7 +113,6 @@ class SupportTicketAdmin(admin.ModelAdmin):
     readonly_fields = (
         "ticket_code",
         "created_at",
-        "closed_at",
     )
 
     fieldsets = (

@@ -1,9 +1,14 @@
+import logging
+
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from apps.support.models import SupportTicket, Client
+from apps.support.models import SupportTicket, Client, Engineer
 from cross.openai_use_case import OpenAIUseCase
 from cross.utils import calculate_final_priority
+
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -14,8 +19,8 @@ from cross.utils import calculate_final_priority
 def support_view(request):
     """
     Создание заявки техподдержки.
-    GET  → показывает форму с подстановкой случайного клиента.
-    POST → принимает входные данные, вызывает AI, создаёт тикет.
+    GET  → пустая форма
+    POST → принимает данные, вызывает AI, создаёт тикет
     """
 
     context = {
@@ -28,15 +33,9 @@ def support_view(request):
     }
 
     # --------------------------------------------------------
-    # GET → отображение формы
+    # GET → просто форма, БЕЗ предзаполнения
     # --------------------------------------------------------
     if request.method == "GET":
-        random_client = Client.objects.order_by("?").first()
-
-        if random_client:
-            context["full_name"] = random_client.full_name
-            context["account_number"] = random_client.account_number
-
         return render(request, "support/create.html", context)
 
     # --------------------------------------------------------
@@ -54,11 +53,11 @@ def support_view(request):
 
     # --------------------------------------------------------
     # ВАЛИДАЦИЯ
-    # --------------------------------------------------------  
+    # --------------------------------------------------------
     if not full_name or not account_number or not description:
         context["error"] = "Пожалуйста, заполните все обязательные поля."
         return render(request, "support/create.html", context)
-    
+
     if not OpenAIUseCase.classify_telecom_issue(description):
         context["error"] = "Описание проблемы не относится к услугам Казахтелекома."
         return render(request, "support/create.html", context)
@@ -66,45 +65,40 @@ def support_view(request):
     # --------------------------------------------------------
     # ПОИСК КЛИЕНТА
     # --------------------------------------------------------
-    client = Client.objects.filter(account_number=account_number).first()
+    client = Client.objects.filter(
+        account_number=account_number,
+        full_name=full_name
+    ).first()
 
     if client is None:
         context["error"] = (
-            "Клиент с указанным лицевым счётом не найден. "
-            "Проверьте правильность данных."
+            "Клиент с указанными данными не найден. "
+            "Проверьте ФИО и лицевой счёт."
         )
         return render(request, "support/create.html", context)
 
     # --------------------------------------------------------
-    # HOOK #1 — место для логирования, антифрода, доп. проверки
+    # AI → единый анализ заявки
     # --------------------------------------------------------
-    # example: RiskAnalyzer.log_request(client, description)
-    # --------------------------------------------------------
-
-    # --------------------------------------------------------
-    # AI → единый запрос
-    # --------------------------------------------------------
-    ai = OpenAIUseCase.generate_full_ticket_ai(description, client.age)
+    ai = OpenAIUseCase.generate_full_ticket_ai(
+        description=description,
+        age=client.age
+    )
 
     if ai is None:
         context["error"] = "AI-сервис временно недоступен. Попробуйте позже."
         return render(request, "support/create.html", context)
 
-    # Распаковка результата
-    client_advice              = ai.get("client_advice", "")
-    engineer_advice            = ai.get("engineer_advice", "")
-    engineer_prob              = ai.get("engineer_probability", 0)
-    engineer_prob_expl         = ai.get("engineer_probability_explanation", "")
-    initial_priority           = ai.get("initial_priority", 50)
+    client_advice      = ai.get("client_advice", "")
+    engineer_advice    = ai.get("engineer_advice", "")
+    engineer_prob      = ai.get("engineer_probability", 0)
+    engineer_prob_expl = ai.get("engineer_probability_explanation", "")
+    initial_priority   = ai.get("initial_priority", 50)
 
-    final_priority = calculate_final_priority(int(initial_priority), client)
-
-    # --------------------------------------------------------
-    # HOOK #2 — место для автоприсвоения инженера или правил SLA
-    # --------------------------------------------------------
-    # example:
-    # assigned_engineer = EngineerAssignmentService.assign(client, final_priority)
-    # --------------------------------------------------------
+    final_priority = calculate_final_priority(
+        int(initial_priority),
+        client
+    )
 
     # --------------------------------------------------------
     # СОЗДАНИЕ ТИКЕТА
@@ -120,13 +114,40 @@ def support_view(request):
         status="new",
     )
 
+    # --------------------------------------------------------
+    # AI → подбор инженера
+    # --------------------------------------------------------
+    engineer_pick = OpenAIUseCase.pick_engineer_for_ticket(ticket)
+
+    if engineer_pick:
+        engineer_id = engineer_pick.get("engineer_id")
+
+        engineer = Engineer.objects.filter(
+            id=engineer_id,
+            is_active=True
+        ).first()
+
+        if engineer:
+            ticket.engineer = engineer
+            ticket.save(update_fields=["engineer"])
+
+            logger.info(
+                "Engineer assigned by AI",
+                extra={
+                    "ticket_id": ticket.id,
+                    "engineer_id": engineer.id,
+                    "engineer_name": engineer.full_name,
+                    "confidence": engineer_pick.get("confidence"),
+                    "reason": engineer_pick.get("reason"),
+                },
+            )
+
     context.update({
         "success": True,
         "ticket": ticket,
     })
 
     return render(request, "support/create.html", context)
-
 
 
 # ============================================================
@@ -137,35 +158,35 @@ def support_view(request):
 def check_support_view(request):
     """
     Проверка статуса заявки.
-    GET  → форма + подстановка случайного ticket_code.
-    POST → поиск заявки.
+    GET  → пустая форма
+    POST → поиск заявки по коду
     """
 
     # --------------------------------------------------------
-    # GET → форма с авто-заполнением случайной заявки
+    # GET → форма без автозаполнения
     # --------------------------------------------------------
     if request.method == "GET":
-        context = {}
-
-        random_ticket = SupportTicket.objects.order_by("?").first()
-        if random_ticket:
-            context["ticket_id"] = random_ticket.ticket_code
-
-        return render(request, "support/check.html", context)
+        return render(request, "support/check.html", {})
 
     # --------------------------------------------------------
     # POST → поиск тикета
     # --------------------------------------------------------
     ticket_code = request.POST.get("ticket_id", "").strip()
 
-    ticket = SupportTicket.objects.filter(ticket_code=ticket_code).first()
+    ticket = SupportTicket.objects.filter(
+        ticket_code=ticket_code
+    ).first()
 
     if ticket is None:
-        return render(request, "support/check.html", {
-            "found": False,
-            "ticket_id": ticket_code,
-            "message": "Заявка не найдена",
-        })
+        return render(
+            request,
+            "support/check.html",
+            {
+                "found": False,
+                "ticket_id": ticket_code,
+                "message": "Заявка не найдена",
+            },
+        )
 
     show_engineer = (
         ticket.status in ["in_progress", "done"]
